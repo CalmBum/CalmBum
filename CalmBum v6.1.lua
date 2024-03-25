@@ -23,7 +23,7 @@ pId = players.user()
 
 
 --Auto Updater Stuffs--
--- https://github.com/CalmBum/CalmBum
+
 
 local SCRIPT_VERSION = "6.1" --fill this in bf done
 
