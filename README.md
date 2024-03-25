@@ -8,4 +8,4 @@
 
 This is a passion project from SuccMyBum and Calpernia_
 
-The script is intended for car enthusiasts
+The script is for car enthusiasts
