@@ -24,8 +24,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-
-local SCRIPT_VERSION = "6.1" --fill this in bf done
+local SCRIPT_VERSION = "6.1" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -52,7 +51,7 @@ end
 if auto_updater == true then error("Invalid auto-updater lib. Please delete your Stand/Lua Scripts/lib/auto-updater.lua and try again") end
 
 local auto_update_config = {
-    source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum%20v6.1.lua", --fill this in bf when path is made
+    source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum%20v6.1.lua", 
     script_relpath=SCRIPT_RELPATH,
 }
 auto_updater.run_auto_update(auto_update_config)
@@ -96,6 +95,7 @@ local vehList = menu.list(menu.my_root(), "Vehicle")
 local plyList = menu.list(menu.my_root(), "Player")
 local wList = menu.list(menu.my_root(), "World")
 local onList = menu.list(menu.my_root(), "Online")
+local opList = menu.list(menu.my_root(), "Options")
 
 
 
@@ -1318,27 +1318,26 @@ end
 ---
 --- Script Meta
 ---
+local update_stuff = menu.list(opList, "Update Stuffs")
 
 
 
-local script_meta_menu = menu.list(menu.my_root(), "CalmBum") --create options tab and throw this in there and expand configuration
-
-menu.divider(script_meta_menu, "CalmBum")
-menu.readonly(script_meta_menu, "Version", SCRIPT_VERSION)
+menu.divider(update_stuff, "CalmBum")
+menu.readonly(update_stuff, "Version", SCRIPT_VERSION)
 if auto_update_config ~= nil then
-    menu.action(script_meta_menu, "Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
+    menu.action(update_stuff, "Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
         auto_update_config.check_interval = 0
         if auto_updater.run_auto_update(auto_update_config) then
             util.toast(("No updates found"))
         end
     end)
-    menu.action(script_meta_menu, "Clean Reinstall", {}, "Force an update to the latest version, regardless of current version.", function()
+    menu.action(update_stuff, "Clean Reinstall", {}, "Force an update to the latest version, regardless of current version.", function()
         auto_update_config.clean_reinstall = true
         auto_updater.run_auto_update(auto_update_config)
     end)
 end
-menu.hyperlink(script_meta_menu, "GitHub Source", "https://github.com/CalmBum/CalmBum", "View source files on Github") --fill this in bf when path is made
-menu.hyperlink(script_meta_menu, "Discord", "https://discord.gg/", "Open Discord Server") --fill this in bf when path is made
+menu.hyperlink(update_stuff, "GitHub Source", "https://github.com/CalmBum/CalmBum", "View source files on Github") --fill this in bf when path is made
+menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Server") --fill this in bf when path is made
 
 
 
