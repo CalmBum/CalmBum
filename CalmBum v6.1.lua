@@ -7,7 +7,7 @@
 --░╚════╝░╚═╝░░╚═╝╚══════╝╚═╝░░░░░╚═╝╚═════╝░░╚═════╝░╚═╝░░░░░╚═╝
 --Brought to you by SuccMyBum & Calpernia_
 
---Thank you to Lance, Wiri, Jinx, Nova, Jacks, Jerry, Dolos, and Hexarobi for some of this code--
+--Thank you to Lance, Wiri, Jinx, Nova, Jacks, Jerry, Dolos, and especially Hexarobi for some of this code--
 
 
 -- idk keeps stuff running?
@@ -19,6 +19,44 @@ util.require_natives("1676318796")
 util.require_natives("2944a")
 
 pId = players.user()
+
+
+
+--Auto Updater Stuffs--
+-- https://github.com/CalmBum/CalmBum
+
+local SCRIPT_VERSION = "6.1" --fill this in bf done
+
+-- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
+
+local status, auto_updater = pcall(require, "auto-updater")
+if not status then
+    local auto_update_complete = nil util.toast("Installing auto-updater...", TOAST_ALL)
+    async_http.init("raw.githubusercontent.com", "/hexarobi/stand-lua-auto-updater/main/auto-updater.lua",
+            function(result, headers, status_code)
+                local function parse_auto_update_result(result, headers, status_code)
+                    local error_prefix = "Error downloading auto-updater: "
+                    if status_code ~= 200 then util.toast(error_prefix..status_code, TOAST_ALL) return false end
+                    if not result or result == "" then util.toast(error_prefix.."Found empty file.", TOAST_ALL) return false end
+                    filesystem.mkdir(filesystem.scripts_dir() .. "lib")
+                    local file = io.open(filesystem.scripts_dir() .. "lib\\auto-updater.lua", "wb")
+                    if file == nil then util.toast(error_prefix.."Could not open file for writing.", TOAST_ALL) return false end
+                    file:write(result) file:close() util.toast("Successfully installed auto-updater lib", TOAST_ALL) return true
+                end
+                auto_update_complete = parse_auto_update_result(result, headers, status_code)
+            end, function() util.toast("Error downloading auto-updater lib. Update failed to download.", TOAST_ALL) end)
+    async_http.dispatch() local i = 1 while (auto_update_complete == nil and i < 40) do util.yield(250) i = i + 1 end
+    if auto_update_complete == nil then error("Error downloading auto-updater lib. HTTP Request timeout") end
+    auto_updater = require("auto-updater")
+end
+if auto_updater == true then error("Invalid auto-updater lib. Please delete your Stand/Lua Scripts/lib/auto-updater.lua and try again") end
+
+local auto_update_config = {
+    source_url="https://raw.githubusercontent.com/CalmBum/CalmBum", --fill this in bf when path is made
+    script_relpath=SCRIPT_RELPATH,
+}
+auto_updater.run_auto_update(auto_update_config)
+
 
 
 
@@ -1234,6 +1272,77 @@ end)
 
 
 
+--Boot up---------
+--Jackface DANCE--
+------------------
+
+if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
+    local jackFace1 = filesystem.scripts_dir() .. '/lib/calmbum/jackface.png'
+    local jackFace2 = filesystem.scripts_dir() .. '/lib/calmbum/jackface2.png'
+    local imageStatus1, image1 = pcall(directx.create_texture, jackFace1)
+    local imageStatus2, image2 = pcall(directx.create_texture, jackFace2)
+    if not imageStatus1 then
+        debug_log("Failed to load image. "..tostring(image1))
+        return
+    end
+    if not imageStatus2 then
+        debug_log("Failed to load image. "..tostring(image2))
+        return
+    end
+
+      
+    -- Display pattern: jackface1, jackface2, jackface1, jackface2, jackface1
+    for j = 1, 5 do
+        local image = (j % 2 == 0) and image2 or image1  -- switch between jackface1 and jackface2
+        for i = 1.0, 0.8, -0.016 do
+            directx.draw_texture(image, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
+            util.yield(2)
+        end
+        for i = 0, 25 do
+            directx.draw_texture(image, 0.15, 0.15, 0.5, 0.8, 0.1, 0.8, 0, 1, 1, 1, 1)
+            util.yield()
+        end
+    end
+
+    -- Fade Out
+    for i = .8, 1, 0.016 do
+        directx.draw_texture(image1, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
+        util.yield(2)
+    end
+end
+
+
+
+
+
+---
+--- Script Meta
+---
+
+
+
+local script_meta_menu = menu.list(menu.my_root(), "CalmBum") --create options tab and throw this in there and expand configuration
+
+menu.divider(script_meta_menu, "CalmBum")
+menu.readonly(script_meta_menu, "Version", SCRIPT_VERSION)
+if auto_update_config ~= nil then
+    menu.action(script_meta_menu, "Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
+        auto_update_config.check_interval = 0
+        if auto_updater.run_auto_update(auto_update_config) then
+            util.toast(t("No updates found"))
+        end
+    end)
+    menu.action(script_meta_menu, "Clean Reinstall", {}, "Force an update to the latest version, regardless of current version.", function()
+        auto_update_config.clean_reinstall = true
+        auto_updater.run_auto_update(auto_update_config)
+    end)
+end
+menu.hyperlink(script_meta_menu, "GitHub Source", "https://github.com/CalmBum/CalmBum", "View source files on Github") --fill this in bf when path is made
+menu.hyperlink(script_meta_menu, "Discord", "https://discord.gg/", "Open Discord Server") --fill this in bf when path is made
+
+
+
+
 
 
 -----------------------------------------------------------
@@ -1905,44 +2014,7 @@ util.create_tick_handler(function()
 
 end)
 
---Boot up---------
---Jackface DANCE--
-------------------
 
-if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
-    local jackFace1 = filesystem.scripts_dir() .. '/lib/calmbum/jackface.png'
-    local jackFace2 = filesystem.scripts_dir() .. '/lib/calmbum/jackface2.png'
-    local imageStatus1, image1 = pcall(directx.create_texture, jackFace1)
-    local imageStatus2, image2 = pcall(directx.create_texture, jackFace2)
-    if not imageStatus1 then
-        debug_log("Failed to load image. "..tostring(image1))
-        return
-    end
-    if not imageStatus2 then
-        debug_log("Failed to load image. "..tostring(image2))
-        return
-    end
-
-      
-    -- Display pattern: jackface1, jackface2, jackface1, jackface2, jackface1
-    for j = 1, 5 do
-        local image = (j % 2 == 0) and image2 or image1  -- switch between jackface1 and jackface2
-        for i = 1.0, 0.8, -0.016 do
-            directx.draw_texture(image, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
-            util.yield(2)
-        end
-        for i = 0, 25 do
-            directx.draw_texture(image, 0.15, 0.15, 0.5, 0.8, 0.1, 0.8, 0, 1, 1, 1, 1)
-            util.yield()
-        end
-    end
-
-    -- Fade Out
-    for i = .8, 1, 0.016 do
-        directx.draw_texture(image1, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
-        util.yield(2)
-    end
-end
 
 
 
