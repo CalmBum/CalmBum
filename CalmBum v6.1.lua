@@ -568,7 +568,6 @@ end)
 -----------------------------------
 
 
-
 --G-Force Meter--
 
 local gforce = menu.list(onList, "G-Force")
@@ -578,95 +577,93 @@ local gforcesettings = menu.list(gforce, "Settings")
 local oldForce
 local xOffset = 0
 local yOffset = 0
-local gForceRad = 0
 local resizeForce = 0.006
 local maxLateral = 0.01
 local maxLongitude = 0.01
 local xCenterG = 0.25
 local yCenterG = 0.9
-local calcGforceToggle = false
 
 menu.toggle_loop(gforce, "G-Force Calculator" , {"G-Force Calculator"}, "calculate da gfroce", function()
-  local grav = 9.81
-  if get_user_car() ~= 0 and PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), true) and oldForce != nil then
-    local newForce = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true)
+    local grav = 9.81
+    if get_user_car() ~= 0 and PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), true) and oldForce != nil then
+        local newForce = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true)
 
-    -- gforce = (change in velocity / time) / gravity
-    forceSide = ((newForce.x - oldForce.x) / 0.01) / grav
-    forceForw = ((newForce.y - oldForce.y) / 0.01) / grav
+        -- gforce = (change in velocity / time) / gravity
+        forceSide = ((newForce.x - oldForce.x) / 0.01) / grav
+        forceForw = ((newForce.y - oldForce.y) / 0.01) / grav
 
-    -- dividing by random values until gforce reading seems reasonableish idk
-    gForceLong = forceSide / 5
-    gForceLat = forceForw / 5
+        -- dividing by random values until gforce reading seems reasonableish idk
+        gForceLong = forceSide / 5
+        gForceLat = forceForw / 5
 
     -- get max
-    if math.abs(gForceLong) > math.abs(maxLongitude) and math.abs(gForceLong) < 10 then
-      maxLongitude = gForceLong
+        if math.abs(gForceLong) > math.abs(maxLongitude) and math.abs(gForceLong) < 10 then
+            maxLongitude = gForceLong
+        end
+        if math.abs(gForceLat) > math.abs(maxLateral) and math.abs(gForceLat) < 10 then
+            maxLateral = gForceLat
+        end
+
+        -- change on meter
+        xOffset = forceSide * resizeForce
+        yOffset = forceForw * resizeForce
+
+        -- debug
+        --directx.draw_text(0.1, 0.10, string.format("Force Side = %f", forceSide), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
+        --directx.draw_text(0.1, 0.12, string.format("Force Forward = %f", forceForw), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
+
+        -- set old vel for change in vel calc
+        oldForce = newForce
+
+        -- wait so we have a time to divide by in the change
+        util.yield(10)
     end
-    if math.abs(gForceLat) > math.abs(maxLateral) and math.abs(gForceLat) < 10 then
-      maxLateral = gForceLat
+
+    if oldForce == nil then
+        oldForce = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true)
     end
-
-    -- change on meter
-    xOffset = forceSide * resizeForce
-    yOffset = forceForw * resizeForce
-
-    -- debug
-    --directx.draw_text(0.1, 0.10, string.format("Force Side = %f", forceSide), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    --directx.draw_text(0.1, 0.12, string.format("Force Forward = %f", forceForw), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-
-    -- set old vel for change in vel calc
-    oldForce = newForce
-
-    -- wait so we have a time to divide by in the change
-    util.yield(10)
-  end
-
-  if oldForce == nil then
-    oldForce = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true)
-  end
 end)
 
 menu.toggle_loop(gforce, "G-Force Meter" , {"G-Force Meter Display"}, "Displays car's g-force", function()
-  local length = 0.05
-  -- because of aspect ratios existing y length has to technically be longer than x
-  -- this is for 16:9 which i hope most people are using
-  local ylength = length * 1.78
+    local length = 0.05
+    -- because of aspect ratios existing y length has to technically be longer than x
+    -- this is for 16:9 which i hope most people are using
+    local ylength = length * 1.78
 
-  -- background
-  directx.draw_rect(xCenterG - length, yCenterG - ylength, length * 2, ylength * 2, {r = 0, g = 0, b = 0, a = 0.2})
+    -- background
+    directx.draw_rect(xCenterG - length, yCenterG - ylength, length * 2, ylength * 2, {r = 0, g = 0, b = 0, a = 0.2})
 
-  -- contain the ball of force
-  if xOffset > length or xOffset * -1 > length then
-    if xOffset > 0 then
-      xOffset = length
-    elseif xOffset < 0 then
-      xOffset = length * -1
+    -- contain the ball of force
+    if xOffset > length or xOffset * -1 > length then
+        if xOffset > 0 then
+            xOffset = length
+        elseif xOffset < 0 then
+            xOffset = length * -1
+        end
     end
-  end
-  if yOffset > ylength or yOffset * -1 > ylength then
-    if yOffset > 0 then
-      yOffset = ylength
-    elseif yOffset < 0 then
-      yOffset = ylength * -1
+    if yOffset > ylength or yOffset * -1 > ylength then
+        if yOffset > 0 then
+            yOffset = ylength
+        elseif yOffset < 0 then
+            yOffset = ylength * -1
+        end
     end
-  end
 
-  -- draw the force ball
-  directx.draw_circle(xCenterG + xOffset, yCenterG + yOffset, length / 16, {r = 1, g = 0.53, b = 1, a = 1})
+    -- draw the force ball
+    directx.draw_circle(xCenterG + xOffset, yCenterG + yOffset, length / 16, {r = 1, g = 0.96, b = 0.55, a = .8})
 
-  -- show max
-  directx.draw_text(xCenterG - length, yCenterG + ylength, string.format("Max Lat: %.1fg", maxLateral), 5, .5, {r = 1, g = 0.53, b = 1, a =1 }, true)
-  directx.draw_text(xCenterG + length, yCenterG + ylength, string.format("Max Lon: %.1fg", maxLongitude), 5, .5, {r = 1, g = 0.53, b = 1, a =1 }, true)
+    -- show max
+    directx.draw_text(xCenterG - (length / 1.7), yCenterG + ylength, string.format("Max Lat: %.1fg", maxLateral), 5, .5, {r = 1, g = 0.96, b = 0.55, a = .8}, true)
+    directx.draw_text(xCenterG + (length / 1.7), yCenterG + ylength, string.format("Max Lon: %.1fg", maxLongitude), 5, .5, {r = 1, g = 0.96, b = 0.55, a = .8}, true)
 end)
 
-menu.slider(gforcesettings, "G-Force Sensitivity", {"set_gforce_sens"}, "", 1, 10, 6, 1, function(val)
-  resizeForce = val * 0.001
+menu.slider(gforcesettings, "G-Force Sensitivity", {"set_gforce_sens"}, "", 1, 10, 4, 1, function(val)
+    resizeForce = val * 0.001
 end)
 
 menu.action(gforcesettings, "Reset Max", {"reset_force_max"}, "", function()
-  maxLateral = 0
-  maxLongitude = 0
+    maxLateral = 0
+    maxLongitude = 0
 end)
 
 menu.slider(moveMeter, "G-Force Meter X", {"set_gforce_x"}, "", 0, 18, 1, 1, function(val)
@@ -678,132 +675,89 @@ menu.slider(moveMeter, "G-Force Meter Y", {"set_gforce_y"}, "", 0, 18, 16, 1, fu
 end)
 
 
-  
---Vector 3 Stuff--
-
-menu.toggle_loop(gforce, "Vector 3 Stuff" , {"adsads"}, "asd", function()
-    -- X = East West
-    -- Y = North South
-    -- Z = Up Down
-    local entityVelocity = ENTITY.GET_ENTITY_VELOCITY(get_user_car_id())
-    local entityCoords = ENTITY.GET_ENTITY_COORDS(get_user_car_id(), true)
-  
-    -- When facing North Y = 1
-    -- Facing South Y = -1
-    -- When facing East X = 1
-    -- Facing West X = -1
-    local entityForward = ENTITY.GET_ENTITY_FORWARD_VECTOR(get_user_car_id())
-  
-    -- Speed X - sideways velocity + = right - = left
-    -- while bool == true:
-    -- Speed Y - forward velocity + = forward - = backward
-    -- speed units are m/s (i think)
-    local entitySpeedVector = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true)
-  
-    --local entityOffsetFromWorld = ENTITY.GET_OFFSET_FROM_ENTITY_GIVEN_WORLD_COORDS(get_user_car_id(), x, y, z)
-  
-    -- could use this to compare frontward bone to rearward bone to get direction?
-    --local entityBonePos = ENTITY.GET_WORLD_POSITION_OF_ENTITY_BONE(get_user_car_id(), bone)
-  
-    directx.draw_text(0.1, 0.10, string.format("Entity Velocity X = %f", entityVelocity.x), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.12, string.format("Entity Velocity Y = %f", entityVelocity.y), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.14, string.format("Entity Velocity Z = %f", entityVelocity.z), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.20, string.format("Entity Coords X = %f", entityCoords.x), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.22, string.format("Entity Coords Y = %f", entityCoords.y), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.24, string.format("Entity Coords Z = %f", entityCoords.z), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.30, string.format("Entity Forward X = %f", entityForward.x), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.32, string.format("Entity Forward Y = %f", entityForward.y), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.34, string.format("Entity Forward Z = %f", entityForward.z), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.40, string.format("Entity Speed X = %f", entitySpeedVector.x), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.42, string.format("Entity Speed Y = %f", entitySpeedVector.y), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    directx.draw_text(0.1, 0.44, string.format("Entity Speed Z = %f", entitySpeedVector.z), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-end)
-
-
-
 
 -- Car Angle--
 
 
-local Showang = menu.list(onList, "Show Angle")
+local showAng = menu.list(onList, "Show Angle")
 
+local lineMeter = true
+local circleMeter = false
 
 -- Move the options to the new submenu
-menu.toggle_loop(Showang, "Show Angle" , {"show_angle"}, "Display the cars current angle", function()
-  dirFacing = ENTITY.GET_ENTITY_FORWARD_VECTOR(get_user_car_id())
-  forwardX = dirFacing.x
-  forwardY = dirFacing.y
-  forwardAngle = math.deg(math.atan2(forwardY, forwardX))
+menu.toggle_loop(showAng, "Show Angle" , {"show_angle"}, "Display the cars current angle", function()
+    dirFacing = ENTITY.GET_ENTITY_FORWARD_VECTOR(get_user_car_id())
+    forwardX = dirFacing.x
+    forwardY = dirFacing.y
+    forwardAngle = math.deg(math.atan2(forwardY, forwardX))
 
-  -- get angle of momentum
-  dirMomentum = ENTITY.GET_ENTITY_VELOCITY(get_user_car_id())
-  momentumX = dirMomentum.x
-  momentumY = dirMomentum.y
-  momentumAngle = math.deg(math.atan2(momentumY, momentumX))
+    -- get angle of momentum
+    dirMomentum = ENTITY.GET_ENTITY_VELOCITY(get_user_car_id())
+    momentumX = dirMomentum.x
+    momentumY = dirMomentum.y
+    momentumAngle = math.deg(math.atan2(momentumY, momentumX))
 
-  -- get forward/backward speed
-  vehDir = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true).y
+    -- get forward/backward speed
+    vehDir = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true).y
 
-  -- get car angle
-  carAngle = forwardAngle - momentumAngle
-  if carAngle > 180 then
-      carAngle -= 360
-  elseif carAngle < -180 then
-      carAngle += 360
-  end
+    -- get car angle
+    carAngle = forwardAngle - momentumAngle
+    if carAngle > 180 then
+        carAngle -= 360
+    elseif carAngle < -180 then
+        carAngle += 360
+    end
 
-  -- Round carAngle to a whole number
-  carAngle = math.floor(carAngle + 0.5)
+    -- Round carAngle to a whole number
+    carAngle = math.floor(carAngle + 0.5)
  
-  -- draw angle as line
-  if carAngle < 180 and carAngle > -180 and math.abs(vehDir) > 0.2 and lineMeter then
-    xPos = (carAngle / 180) * 0.1
-    -- draw angle
-    directx.draw_text(0.5, 1.0, string.format("%d", math.abs(carAngle)) .. '°', 5, 1.4, {r=1, g=1, b=1, a=1}, true)
-    -- draw colourful line wow so pretty
-    directx.draw_line(0.4, 0.9, 0.4475, 0.9, {r=1, g=1, b=0, a=1})
-    directx.draw_line(0.4475, 0.9, 0.453, 0.9, {r=1, g=1, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
-    directx.draw_line(0.453, 0.9, 0.472, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
-    directx.draw_line(0.472, 0.9, 0.4775, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=0, b=0, a=1})
-    directx.draw_line(0.4775, 0.9, 0.5215, 0.9, {r=1, g=0, b=0, a=1})
-    directx.draw_line(0.5215, 0.9, 0.527, 0.9, {r=1, g=0, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
-    directx.draw_line(0.527, 0.9, 0.546, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
-    directx.draw_line(0.546, 0.9, 0.5515, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=1, b=0, a=1})
-    directx.draw_line(0.5515, 0.9, 0.6, 0.9, {r=1, g=1, b=0, a=1})
+    -- draw angle as line
+    if carAngle < 180 and carAngle > -180 and math.abs(vehDir) > 0.2 and lineMeter then
+        -- Draw the angle value
+        directx.draw_text(circleX, circleY + radius + 0.014, string.format("%d", math.abs(carAngle)) .. 'Â°', 5, 1.0, {r=1, g=1, b=1, a=1}, true)
+        if lineMeter then
+            xPos = (carAngle / 180) * 0.1
+            -- draw colourful line wow so pretty
+            directx.draw_line(0.4, 0.9, 0.4475, 0.9, {r=1, g=1, b=0, a=1})
+            directx.draw_line(0.4475, 0.9, 0.453, 0.9, {r=1, g=1, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
+            directx.draw_line(0.453, 0.9, 0.472, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
+            directx.draw_line(0.472, 0.9, 0.4775, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=0, b=0, a=1})
+            directx.draw_line(0.4775, 0.9, 0.5215, 0.9, {r=1, g=0, b=0, a=1})
+            directx.draw_line(0.5215, 0.9, 0.527, 0.9, {r=1, g=0, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
+            directx.draw_line(0.527, 0.9, 0.546, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
+            directx.draw_line(0.546, 0.9, 0.5515, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=1, b=0, a=1})
+            directx.draw_line(0.5515, 0.9, 0.6, 0.9, {r=1, g=1, b=0, a=1})
 
+            -- draw where we is on the line
+            directx.draw_rect(0.4995 + xPos, 0.895, .001, .01, 0, 0, 0, 1)
+        elseif circleMeter then
+            -- draw angle as cirgle
 
-    -- draw where we is on the line
-    directx.draw_rect(0.4995 + xPos, 0.895, .001, .01, 0, 0, 0, 1)
-  -- draw angle as cirgle
-  elseif carAngle < 180 and carAngle > -180 and math.abs(vehDir) > 0.2 and circleMeter then
-    -- Draw the circle
-    local circleX, circleY = 0.5, 0.9
-    local radius = 0.0375
-    directx.draw_circle(circleX, circleY, radius, {r = 1, g = 1, b = 1, a = 0.1})
+            -- Draw the circle
+            local circleX, circleY = 0.5, 0.9
+            local radius = 0.0375
+            directx.draw_circle(circleX, circleY, radius, {r = 1, g = 1, b = 1, a = 0.1})
 
-    -- Draw the angle value
-    directx.draw_text(circleX, circleY + radius + 0.014, string.format("%d", math.abs(carAngle)) .. '°', 5, 1.0, {r=1, g=1, b=1, a=1}, true)
+            -- Calculate the position of the line representing the angle
+            local angleRad = math.rad(-carAngle - -90) 
+            local lineX = circleX + radius * math.cos(angleRad)
+            local lineY = circleY + radius * math.sin(angleRad)
 
-    -- Calculate the position of the line representing the angle
-    local angleRad = math.rad(-carAngle - -90) 
-    local lineX = circleX + radius * math.cos(angleRad)
-    local lineY = circleY + radius * math.sin(angleRad)
-
-    -- Draw the line representing the angle
-    directx.draw_line(circleX, circleY, lineX, lineY, 1, 0, 0, 1)
-  end
+            -- Draw the line representing the angle
+            directx.draw_line(circleX, circleY, lineX, lineY, 1, 0, 0, 1)
+        end
+    end
 end)
 
-menu.action(Showang, "Line Meter", {"line_meter"}, "Display angle on line", function()
-  lineMeter = true
-  circleMeter = false
+menu.action(showAng, "Line Meter", {"line_meter"}, "Display angle on line", function()
+    lineMeter = true
+    circleMeter = false
 end)
 
-menu.action(Showang, "Circle Meter", {"circle_meter"}, "Display angle in circle", function()
-  lineMeter = false
-  circleMeter = true
+menu.action(showAng, "Circle Meter", {"circle_meter"}, "Display angle in circle", function()
+    lineMeter = false
+    circleMeter = true
 end)
-
 
 
 
@@ -1281,6 +1235,8 @@ menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Ser
 -- ClearTraffic
 
 
+
+
 local clearProj = false
 local clearObj = false
 
@@ -1349,11 +1305,28 @@ end
 
 
 
+--Remote Boosties--
 
 
 
+function addPlayer(pId)
+    menu.divider(menu.player_root(pId), "CalmBum")
+    menu.text_input(menu.player_root(pId), "Boosties", {"boost"}, "", function(speed)
+        local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+        if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
+            local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+            util.toast("Boosting")
+            for i = 1, 50 do
+                NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
+                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed)
+                ENTITY.SET_ENTITY_MAX_SPEED(vehicle, speed)
+            end
+        end
+    end)
+end
 
-
+players.on_join(addPlayer)
+players.dispatch_on_join()
 
 
 
@@ -1361,36 +1334,6 @@ end
 -----------------------------------------------------------
 ------TESTING ZONE-----------------------------------------
 -----------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
