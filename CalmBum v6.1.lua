@@ -1243,6 +1243,41 @@ end)
 
 
 
+
+-----------------------------------
+--Options----------------------------
+-----------------------------------
+
+
+
+---
+--- Script Meta
+---
+local update_stuff = menu.list(opList, "Update Stuffs")
+
+
+
+menu.divider(update_stuff, "CalmBum")
+menu.readonly(update_stuff, "Version", SCRIPT_VERSION)
+if auto_update_config ~= nil then
+    menu.action(update_stuff, "Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
+        auto_update_config.check_interval = 0
+        if auto_updater.run_auto_update(auto_update_config) then
+            util.toast(("No updates found"))
+        end
+    end)
+    menu.action(update_stuff, "Clean Reinstall", {}, "Force an update to the latest version, regardless of current version.", function()
+        auto_update_config.clean_reinstall = true
+        auto_updater.run_auto_update(auto_update_config)
+    end)
+end
+menu.hyperlink(update_stuff, "GitHub Source", "https://github.com/CalmBum/CalmBum", "View source files on Github") 
+menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Server") 
+
+
+
+
+
 -- ClearTraffic
 
 
@@ -1315,29 +1350,7 @@ end
 
 
 
----
---- Script Meta
----
-local update_stuff = menu.list(opList, "Update Stuffs")
 
-
-
-menu.divider(update_stuff, "CalmBum")
-menu.readonly(update_stuff, "Version", SCRIPT_VERSION)
-if auto_update_config ~= nil then
-    menu.action(update_stuff, "Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
-        auto_update_config.check_interval = 0
-        if auto_updater.run_auto_update(auto_update_config) then
-            util.toast(("No updates found"))
-        end
-    end)
-    menu.action(update_stuff, "Clean Reinstall", {}, "Force an update to the latest version, regardless of current version.", function()
-        auto_update_config.clean_reinstall = true
-        auto_updater.run_auto_update(auto_update_config)
-    end)
-end
-menu.hyperlink(update_stuff, "GitHub Source", "https://github.com/CalmBum/CalmBum", "View source files on Github") --fill this in bf when path is made
-menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Server") --fill this in bf when path is made
 
 
 
