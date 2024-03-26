@@ -24,7 +24,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.1" 
+local SCRIPT_VERSION = "6.1.2" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -1308,7 +1308,7 @@ function noAnything(clearAll)
             anything_multiplier_id = nil
         end
 
-        directx.draw_text(0.02, 0.02, string.format("Clearing"), 5, .5, {r = 1, g = 0, b = 0, a = 1}, true)
+        directx.draw_text(0.02, 0.02, string.format("Clearing Plus"), 5, .5, {r = 1, g = 0, b = 0, a = 1}, true)
     else
         -- Remove any potential spheres (15 is max and I've only seen IDs of -1 or 0, so this is excessive just to be safe)
         clearSphere()
@@ -1321,6 +1321,13 @@ function clearSphere()
         MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, true)
     end
 end
+
+menu.toggle_loop(sphereStuff, "No Traffic Plus v2", {}, "If No Traffic Plus stops working, use this", function()
+    MISC.CLEAR_AREA(1.1, 1.1, 1.1, 19999.9, true, false, false, true)
+    directx.draw_text(0.02, 0.02, string.format("Clearing"), 5, .5, {r = 1, g = 0, b = 0, a = 1}, true)
+    util.yield(100)
+end)
+
 
 
 
