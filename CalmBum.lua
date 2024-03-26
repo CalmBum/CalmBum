@@ -51,7 +51,7 @@ end
 if auto_updater == true then error("Invalid auto-updater lib. Please delete your Stand/Lua Scripts/lib/auto-updater.lua and try again") end
 
 local auto_update_config = {
-    source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum%20v6.1.lua", 
+    source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum.lua", 
     script_relpath=SCRIPT_RELPATH,
 }
 auto_updater.run_auto_update(auto_update_config)
