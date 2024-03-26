@@ -282,7 +282,7 @@ local Npurge = menu.list(vehList, "NOS Purge")
 
 
 
-menu.toggle_loop(Npurge, "NOS Purge Hood", {"NOS_purge"}, "Fleeeeeeeeeex", function()
+menu.toggle_loop(Npurge, "NOS Purge Hood", {"NOS_purge"}, "Fleeex with Tab/Square PS/X xbox", function()
 
   local nos_effect = {"core", "ent_sht_steam", .2}
   local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
@@ -315,7 +315,7 @@ end)
 
 --Nos Purge frontend
 
-menu.toggle_loop(Npurge, "NOS Purge Front", {"NOS_Purge_Front"}, "Doesn't stop correctly with Constructs", function()
+menu.toggle_loop(Npurge, "NOS Purge Front", {"NOS_Purge_Front"}, "Fleeex with Tab/Square PS/X xbox", function()
 
     local nos_effect = {"core", "ent_sht_steam", 0.2}
     local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
@@ -347,7 +347,7 @@ menu.toggle_loop(Npurge, "NOS Purge Front", {"NOS_Purge_Front"}, "Doesn't stop c
 
 
 --Nos purge bikes--
-  menu.toggle_loop(Npurge, "NOS Purge Bike", {"NOS_purge_Bike"}, "Fleeeeeeeeeex", function()
+  menu.toggle_loop(Npurge, "NOS Purge Bike", {"NOS_purge_Bike"}, "Fleeex with Tab/Square PS/X xbox", function()
 
     local nos_effect = {"core", "ent_sht_steam", .2}
     local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
@@ -382,7 +382,7 @@ end)
 local nitros_duration = 1000
 local nitros_power = 1
 
-menu.toggle_loop(vehList, "Nitros", {"nitros"}, "Too soon Jr.", function(toggle)
+menu.toggle_loop(vehList, "Nitros", {"nitros"}, "Too soon Jr. (X on KBM, X on PS, A on Xbox)", function(toggle)
     if get_user_car() ~= 0 then
         if PAD.IS_CONTROL_JUST_PRESSED(357, 357) then
             request_ptfx_asset('veh_xs_vehicle_mods')
