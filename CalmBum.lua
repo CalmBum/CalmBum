@@ -24,7 +24,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.2" 
+local SCRIPT_VERSION = "6.1.3" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -381,6 +381,7 @@ end)
 -- Nitros
 local nitros_duration = 1000
 local nitros_power = 1
+local nitros_rechargeTime = 1000
 
 menu.toggle_loop(vehList, "Nitros", {"nitros"}, "Too soon Jr. (X on KBM, X on PS, A on Xbox)", function(toggle)
     if get_user_car() ~= 0 then
@@ -402,6 +403,10 @@ end)
 
 menu.slider(vehList, "Nitros HP", {"Nitro_HP"}, "Scaled to HP/ 1=100hp, 5=500hp, 0=disable power boost", 0, 5, 1, 1, function(val)
     nitros_power = val
+end)
+
+menu.slider(vehList, "Nitros Recharge Time", {"Nitro_recharge_time"}, "How long it takes to refill your nitros boost", 0, 1000, 1, 1, function(val)
+    nitros_rechargeTime = val
 end)
 
 
