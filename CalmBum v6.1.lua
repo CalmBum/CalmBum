@@ -679,85 +679,85 @@ end)
 -- Car Angle--
 
 
-local showAng = menu.list(onList, "Show Angle")
+local Showang = menu.list(onList, "Show Angle")
 
-local lineMeter = true
-local circleMeter = false
 
 -- Move the options to the new submenu
-menu.toggle_loop(showAng, "Show Angle" , {"show_angle"}, "Display the cars current angle", function()
-    dirFacing = ENTITY.GET_ENTITY_FORWARD_VECTOR(get_user_car_id())
-    forwardX = dirFacing.x
-    forwardY = dirFacing.y
-    forwardAngle = math.deg(math.atan2(forwardY, forwardX))
+menu.toggle_loop(Showang, "Show Angle" , {"show_angle"}, "Display the cars current angle", function()
+  dirFacing = ENTITY.GET_ENTITY_FORWARD_VECTOR(get_user_car_id())
+  forwardX = dirFacing.x
+  forwardY = dirFacing.y
+  forwardAngle = math.deg(math.atan2(forwardY, forwardX))
 
-    -- get angle of momentum
-    dirMomentum = ENTITY.GET_ENTITY_VELOCITY(get_user_car_id())
-    momentumX = dirMomentum.x
-    momentumY = dirMomentum.y
-    momentumAngle = math.deg(math.atan2(momentumY, momentumX))
+  -- get angle of momentum
+  dirMomentum = ENTITY.GET_ENTITY_VELOCITY(get_user_car_id())
+  momentumX = dirMomentum.x
+  momentumY = dirMomentum.y
+  momentumAngle = math.deg(math.atan2(momentumY, momentumX))
 
-    -- get forward/backward speed
-    vehDir = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true).y
+  -- get forward/backward speed
+  vehDir = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true).y
 
-    -- get car angle
-    carAngle = forwardAngle - momentumAngle
-    if carAngle > 180 then
-        carAngle -= 360
-    elseif carAngle < -180 then
-        carAngle += 360
-    end
+  -- get car angle
+  carAngle = forwardAngle - momentumAngle
+  if carAngle > 180 then
+      carAngle -= 360
+  elseif carAngle < -180 then
+      carAngle += 360
+  end
 
-    -- Round carAngle to a whole number
-    carAngle = math.floor(carAngle + 0.5)
+  -- Round carAngle to a whole number
+  carAngle = math.floor(carAngle + 0.5)
  
-    -- draw angle as line
-    if carAngle < 180 and carAngle > -180 and math.abs(vehDir) > 0.2 and lineMeter then
-        -- Draw the angle value
-        directx.draw_text(circleX, circleY + radius + 0.014, string.format("%d", math.abs(carAngle)) .. 'Â°', 5, 1.0, {r=1, g=1, b=1, a=1}, true)
-        if lineMeter then
-            xPos = (carAngle / 180) * 0.1
-            -- draw colourful line wow so pretty
-            directx.draw_line(0.4, 0.9, 0.4475, 0.9, {r=1, g=1, b=0, a=1})
-            directx.draw_line(0.4475, 0.9, 0.453, 0.9, {r=1, g=1, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
-            directx.draw_line(0.453, 0.9, 0.472, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
-            directx.draw_line(0.472, 0.9, 0.4775, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=0, b=0, a=1})
-            directx.draw_line(0.4775, 0.9, 0.5215, 0.9, {r=1, g=0, b=0, a=1})
-            directx.draw_line(0.5215, 0.9, 0.527, 0.9, {r=1, g=0, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
-            directx.draw_line(0.527, 0.9, 0.546, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
-            directx.draw_line(0.546, 0.9, 0.5515, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=1, b=0, a=1})
-            directx.draw_line(0.5515, 0.9, 0.6, 0.9, {r=1, g=1, b=0, a=1})
+  -- draw angle as line
+  if carAngle < 180 and carAngle > -180 and math.abs(vehDir) > 0.2 and lineMeter then
+    xPos = (carAngle / 180) * 0.1
+    -- draw angle
+    directx.draw_text(0.5, 1.0, string.format("%d", math.abs(carAngle)) .. '°', 5, 1.4, {r=1, g=1, b=1, a=1}, true)
+    -- draw colourful line wow so pretty
+    directx.draw_line(0.4, 0.9, 0.4475, 0.9, {r=1, g=1, b=0, a=1})
+    directx.draw_line(0.4475, 0.9, 0.453, 0.9, {r=1, g=1, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
+    directx.draw_line(0.453, 0.9, 0.472, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
+    directx.draw_line(0.472, 0.9, 0.4775, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=0, b=0, a=1})
+    directx.draw_line(0.4775, 0.9, 0.5215, 0.9, {r=1, g=0, b=0, a=1})
+    directx.draw_line(0.5215, 0.9, 0.527, 0.9, {r=1, g=0, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
+    directx.draw_line(0.527, 0.9, 0.546, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
+    directx.draw_line(0.546, 0.9, 0.5515, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=1, b=0, a=1})
+    directx.draw_line(0.5515, 0.9, 0.6, 0.9, {r=1, g=1, b=0, a=1})
 
-            -- draw where we is on the line
-            directx.draw_rect(0.4995 + xPos, 0.895, .001, .01, 0, 0, 0, 1)
-        elseif circleMeter then
-            -- draw angle as cirgle
 
-            -- Draw the circle
-            local circleX, circleY = 0.5, 0.9
-            local radius = 0.0375
-            directx.draw_circle(circleX, circleY, radius, {r = 1, g = 1, b = 1, a = 0.1})
+    -- draw where we is on the line
+    directx.draw_rect(0.4995 + xPos, 0.895, .001, .01, 0, 0, 0, 1)
+  -- draw angle as cirgle
+  elseif carAngle < 180 and carAngle > -180 and math.abs(vehDir) > 0.2 and circleMeter then
+    -- Draw the circle
+    local circleX, circleY = 0.5, 0.9
+    local radius = 0.0375
+    directx.draw_circle(circleX, circleY, radius, {r = 1, g = 1, b = 1, a = 0.1})
 
-            -- Calculate the position of the line representing the angle
-            local angleRad = math.rad(-carAngle - -90) 
-            local lineX = circleX + radius * math.cos(angleRad)
-            local lineY = circleY + radius * math.sin(angleRad)
+    -- Draw the angle value
+    directx.draw_text(circleX, circleY + radius + 0.014, string.format("%d", math.abs(carAngle)) .. '°', 5, 1.0, {r=1, g=1, b=1, a=1}, true)
 
-            -- Draw the line representing the angle
-            directx.draw_line(circleX, circleY, lineX, lineY, 1, 0, 0, 1)
-        end
-    end
+    -- Calculate the position of the line representing the angle
+    local angleRad = math.rad(-carAngle - -90) 
+    local lineX = circleX + radius * math.cos(angleRad)
+    local lineY = circleY + radius * math.sin(angleRad)
+
+    -- Draw the line representing the angle
+    directx.draw_line(circleX, circleY, lineX, lineY, 1, 0, 0, 1)
+  end
 end)
 
-menu.action(showAng, "Line Meter", {"line_meter"}, "Display angle on line", function()
-    lineMeter = true
-    circleMeter = false
+menu.action(Showang, "Line Meter", {"line_meter"}, "Display angle on line", function()
+  lineMeter = true
+  circleMeter = false
 end)
 
-menu.action(showAng, "Circle Meter", {"circle_meter"}, "Display angle in circle", function()
-    lineMeter = false
-    circleMeter = true
+menu.action(Showang, "Circle Meter", {"circle_meter"}, "Display angle in circle", function()
+  lineMeter = false
+  circleMeter = true
 end)
+
 
 
 
