@@ -1232,33 +1232,95 @@ menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Ser
 
 
 
--- ClearTraffic
+
+--No Traffic-- 
 
 
+local sphereStuff = menu.list(menu.my_root(), "No Traffic")
 
 
-local clearProj = false
-local clearObj = false
+local pop_multiplier_id = nil
 
-menu.toggle_loop(menu.my_root(), "No stuff", {}, "Clears the world of stuff", function()
-    MISC.CLEAR_AREA_OF_VEHICLES(1.1, 1.1, 1.1, 19999.9, false, false, false, false, false, false, false)
-    MISC.CLEAR_AREA_OF_PEDS(1.1, 1.1, 1.1, 19999.9, 1)
-    if clearObj then
-        MISC.CLEAR_AREA_OF_OBJECTS(1.1, 1.1, 1.1, 19999.9, 1)
+menu.toggle_loop(sphereStuff, "No Traffic", {}, "Clear the world of traffic, globally.", function()
+    noTraffic(true)
+end, function()             
+    noTraffic(false)
+end)
+
+function noTraffic(trafficOff)
+    if trafficOff then
+        -- Only create a new sphere if one doesn't already exist
+        if pop_multiplier_id == nil or !MISC.DOES_POP_MULTIPLIER_SPHERE_EXIST(0) then
+            pop_multiplier_id = MISC.ADD_POP_MULTIPLIER_SPHERE(0, 0, -100, 20000, 0, 0, false, true)
+            MISC.CLEAR_AREA(0, 0, -100, 19999.9, true, false, false, true)
+            --util.toast("Created sphere")
+            --util.toast(pop_multiplier_id)
+        end
+
+        -- only sphere 0 is global, others dont matter
+        if pop_multiplier_id != 0 then
+            clearSphere()
+            pop_multiplier_id = nil
+        end
+
+        directx.draw_text(0.02, 0.02, string.format("Clearing"), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
+    else
+        -- remove any potential spheres (15 is max and ive only seen id's of -1 or 0 so this is excessive just to be safe)
+        --util.toast("Removing any spheres")
+        clearSphere()
     end
-    if clearProj then
-        MISC.CLEAR_AREA_OF_PROJECTILES(1.1, 1.1, 1.1, 19999.9, 1)
+end
+
+function clearSphere()
+    for i = -10, 10 do
+        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, false)
+        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, true)
     end
-    util.yield(100)
+end
+
+
+
+--No Traffic Plus--
+
+menu.toggle_loop(sphereStuff, "No Traffic Plus", {}, "Extra OP No traffic option", function()
+    noAnything(true)
+end, function()
+    noAnything(false)
 end)
 
-menu.toggle(menu.my_root(), "Clear Projectiles", {}, "No more pesky missiles", function()
-clearProj = not clearProj
-end)
+local anything_multiplier_id = nil
 
-menu.toggle(menu.my_root(), "Clear Objects", {}, "Broken street lamps etc (breaks interiors)", function()
-clearObj = not clearObj
-end)
+function noAnything(clearAll)
+    if clearAll then
+        -- Only create a new sphere if one doesn't already exist
+        if anything_multiplier_id == nil or not MISC.DOES_POP_MULTIPLIER_SPHERE_EXIST(anything_multiplier_id) then
+            anything_multiplier_id = MISC.ADD_POP_MULTIPLIER_SPHERE(0, 0, -100, 20000, 0, 0, false, true)
+            MISC.CLEAR_AREA(0, 0, -100, 19999.9, true, false, false, true)
+        end
+
+        -- Clear the area again to remove any remaining entities
+        MISC.CLEAR_AREA(1.1, 1.1, 1.1, 19999.9, true, false, false, true)
+        util.yield(100)
+
+        -- Only sphere 0 is global, others don't matter
+        if anything_multiplier_id != 0 then
+            clearSphere()
+            anything_multiplier_id = nil
+        end
+
+        directx.draw_text(0.02, 0.02, string.format("Clearing"), 5, .5, {r = 1, g = 0, b = 0, a = 1}, true)
+    else
+        -- Remove any potential spheres (15 is max and I've only seen IDs of -1 or 0, so this is excessive just to be safe)
+        clearSphere()
+    end
+end
+
+function clearSphere()
+    for i = -10, 10 do
+        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, false)
+        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, true)
+    end
+end
 
 
 
@@ -1350,52 +1412,6 @@ players.dispatch_on_join()
 menu.action(onList, "Lightning" , {"Lightning"}, "Thor is angry" , function(f)
     natives.FORCE_LIGHTNING_FLASH()
   end)
-
-
-
-
-
---Boot up---------
---Jackface DANCE--
-------------------
-
-if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
-    local jackFace1 = filesystem.scripts_dir() .. '/lib/calmbum/jackface.png'
-    local jackFace2 = filesystem.scripts_dir() .. '/lib/calmbum/jackface2.png'
-    local imageStatus1, image1 = pcall(directx.create_texture, jackFace1)
-    local imageStatus2, image2 = pcall(directx.create_texture, jackFace2)
-    if not imageStatus1 then
-        debug_log("Failed to load image. "..tostring(image1))
-        return
-    end
-    if not imageStatus2 then
-        debug_log("Failed to load image. "..tostring(image2))
-        return
-    end
-
-      
-    -- Display pattern: jackface1, jackface2, jackface1, jackface2, jackface1
-    for j = 1, 5 do
-        local image = (j % 2 == 0) and image2 or image1  -- switch between jackface1 and jackface2
-        for i = 1.0, 0.8, -0.016 do
-            directx.draw_texture(image, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
-            util.yield(2)
-        end
-        for i = 0, 25 do
-            directx.draw_texture(image, 0.15, 0.15, 0.5, 0.8, 0.1, 0.8, 0, 1, 1, 1, 1)
-            util.yield()
-        end
-    end
-
-    -- Fade Out
-    for i = .8, 1, 0.016 do
-        directx.draw_texture(image1, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
-        util.yield(2)
-    end
-end
-
-
-
 
 
 
@@ -1750,8 +1766,6 @@ end)
 
 
 
-
-
 --Nano Drone--
 
 local function BitTest(value, bit)
@@ -1777,8 +1791,6 @@ menu.action(plyList, "Nano Drone", {"Nano Drone"}, "Little bb drone(doesn't work
         memory.write_int(p_bits, SetBit(bits, 23))
     end
 end)
-
-
 
 
 --BEYBLADE--
@@ -1809,7 +1821,6 @@ end, function()
     set_ped_can_ragdoll(players.user_ped(), true)
     stop_anim_task(players.user_ped(), "mph_nar_fin_ext-32", "mp_m_freemode_01_dual-32", 1)
 end)
-
 
 
 ==NUKE GUN==
