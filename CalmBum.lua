@@ -24,7 +24,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.3" 
+local SCRIPT_VERSION = "6.1.2" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -998,7 +998,7 @@ menu.list_select(lradio, "PartyBus Stations", {}, "", tables.station_names, 1, f
 end)
 
 local party_bus = nil
-menu.toggle_loop(lradio, "Become PartyBus", {""}, "Radio-Go-BRRR", function()
+menu.toggle_loop(lradio, "Become PartyBus", {""}, "Become one with the Party Bus", function()
     local ped = players.user_ped()
     if party_bus == nil then
         local offset = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(ped, 0.0, 0.0, 3.5)
@@ -1045,7 +1045,7 @@ end)
 
 --Aesthetify--
 
-menu.toggle(wList, "Aesthetify", {}, "Enables Aesthetic Light with purple color", function(on)
+menu.toggle(wList, "Aesthetify", {}, "Whooaa I think there was something in that hippie I just ate... my hands are huuuuge", function(on)
     if on then
         menu.trigger_commands("shader glasses_purple")
         menu.trigger_commands("aestheticcolourred 255")
