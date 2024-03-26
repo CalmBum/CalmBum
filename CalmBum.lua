@@ -24,7 +24,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.2" 
+local SCRIPT_VERSION = "6.1.3" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -53,6 +53,18 @@ if auto_updater == true then error("Invalid auto-updater lib. Please delete your
 local auto_update_config = {
     source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum.lua", 
     script_relpath=SCRIPT_RELPATH,
+    dependencies={
+      {
+        name="Jackface",
+        source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum/Jackface.png",
+        script_relpath="CalmBum/Jackface.png",
+      },
+      {
+        name="Jackface2",
+        source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum/Jackface2.png",
+        script_relpath="CalmBum/Jackface2.png",
+      },
+    }
 }
 auto_updater.run_auto_update(auto_update_config)
 
