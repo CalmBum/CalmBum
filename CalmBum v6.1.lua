@@ -95,7 +95,7 @@ local vehList = menu.list(menu.my_root(), "Vehicle")
 local plyList = menu.list(menu.my_root(), "Player")
 local wList = menu.list(menu.my_root(), "World")
 local onList = menu.list(menu.my_root(), "Online")
-local opList = menu.list(menu.my_root(), "Options")
+local setList = menu.list(menu.my_root(), "Settings")
 
 
 
@@ -1199,7 +1199,7 @@ end)
 
 
 -----------------------------------
---Options----------------------------
+--Settings----------------------------
 -----------------------------------
 
 
@@ -1207,7 +1207,7 @@ end)
 ---
 --- Script Meta
 ---
-local update_stuff = menu.list(opList, "Update Stuffs")
+local update_stuff = menu.list(setList, "Update Stuffs")
 
 
 
