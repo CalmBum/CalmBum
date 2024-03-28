@@ -1008,7 +1008,7 @@ tables.stations = {
     "RADIO_27_DLC_PRHEI4"
 }
 
-local selected_radio_station = "RADIO_07_DANCE_01"
+local selected_radio_station = "RADIO_11_TALK_02"
 menu.list_select(lradio, "PartyBus Stations", {}, "", tables.station_names, 1, function(index)
     selected_radio_station = tables.stations[index]
 end)
