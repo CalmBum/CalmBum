@@ -381,9 +381,11 @@ end)
 -- Nitros
 local nitros_duration = 1000
 local nitros_power = 1
-local nitros_rechargeTime = 1000
+local nitros_rechargeTime = 100
 
-menu.toggle_loop(vehList, "Nitros", {"nitros"}, "Too soon Jr. (X on KBM, X on PS, A on Xbox)", function(toggle)
+local nitroList = menu.list(vehList, "Nitros")
+
+menu.toggle_loop(nitroList, "Nitros", {"nitros"}, "Too soon Jr. (X on KBM, X on PS, A on Xbox)", function(toggle)
     if get_user_car() ~= 0 then
         if PAD.IS_CONTROL_JUST_PRESSED(357, 357) then
             request_ptfx_asset('veh_xs_vehicle_mods')
@@ -397,15 +399,15 @@ menu.toggle_loop(vehList, "Nitros", {"nitros"}, "Too soon Jr. (X on KBM, X on PS
     end
 end)
 
-menu.slider(vehList, "Nitros Timer", {"Nitros_Timer"}, "3 = .3 seconds / 10 = 1 second", 3, 50, 5, 1, function(val)
+menu.slider(nitroList, "Nitros Timer", {"Nitros_Timer"}, "3 = .3 seconds / 10 = 1 second", 3, 50, 5, 1, function(val)
     nitros_duration = val * 100
 end)
 
-menu.slider(vehList, "Nitros HP", {"Nitro_HP"}, "Scaled to HP/ 1=100hp, 5=500hp, 0=disable power boost", 0, 5, 1, 1, function(val)
+menu.slider(nitroList, "Nitros HP", {"Nitro_HP"}, "Scaled to HP/ 1=100hp, 5=500hp, 0=disable power boost", 0, 5, 1, 1, function(val)
     nitros_power = val
 end)
 
-menu.slider(vehList, "Nitros Recharge Time", {"Nitro_recharge_time"}, "How long it takes to refill your nitros boost", 0, 1000, 1, 1, function(val)
+menu.slider(nitroList, "Nitros Recharge Time", {"Nitro_recharge_time"}, "How long it takes to refill your nitros boost", 0, 100, 1, 1, function(val)
     nitros_rechargeTime = val
 end)
 
