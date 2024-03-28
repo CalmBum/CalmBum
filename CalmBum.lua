@@ -24,7 +24,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.4" 
+local SCRIPT_VERSION = "6.1.5" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -963,7 +963,7 @@ tables.station_names = {
     "Blonded Los Santos 97.8 FM",
     "Los Santos Underground Radio",
     "iFruit Radio",
-    "Motomami Lost Santos",
+    "MOTOMAMI Lost Santos",
     "Los Santos Rock Radio",
     "Non-Stop-Pop FM",
     "Radio Los Santos",
@@ -1008,7 +1008,7 @@ tables.stations = {
     "RADIO_27_DLC_PRHEI4"
 }
 
-local selected_radio_station = "RADIO_11_TALK_02"
+local selected_radio_station = "RADIO_07_DANCE_01"
 menu.list_select(lradio, "PartyBus Stations", {}, "", tables.station_names, 1, function(index)
     selected_radio_station = tables.stations[index]
 end)
