@@ -24,7 +24,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.3" 
+local SCRIPT_VERSION = "6.1.4" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -447,6 +447,15 @@ menu.toggle(plyList, "Stumble over", {'Stumble over'}, "Few too many beers m8", 
         PED.RESET_PED_RAGDOLL_TIMER(players.user_ped())
         util.yield_once()
     end
+end)
+
+--Parkour!--
+
+menu.action(plyList, "Parkour!" , {"Parkour!"}, "RUN! JUMP! ..THROW A GRENADE?", function()
+    PED.SET_PED_TO_RAGDOLL(PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID()), 6, 20, 20)
+     for i = 1, 10 do
+          ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 1, 0, 0, 50, 0, 0, 0, false, false, false, false, false, false)
+     end
 end)
 
 --BREAK DANCE--
@@ -1344,6 +1353,11 @@ menu.toggle_loop(sphereStuff, "No Traffic Plus v2", {}, "If No Traffic Plus stop
     directx.draw_text(0.02, 0.02, string.format("Clearing"), 5, .5, {r = 1, g = 0, b = 0, a = 1}, true)
     util.yield(100)
 end)
+
+
+
+
+
 
 
 
