@@ -23,7 +23,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.9" 
+local SCRIPT_VERSION = "6.1.10" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -1447,3 +1447,4 @@ end
 ------TESTING ZONE-----------------------------------------
 -----------------------------------------------------------
 
+[[]]
