@@ -23,7 +23,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.10" 
+local SCRIPT_VERSION = "6.2"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -1385,6 +1385,49 @@ end
 ------------------------------------------------------------------------- 
 
 
+function controlVehicle(vehicle, position)
+    local entity1
+    local height, min, max = v3.new(), v3.new(), v3.new()
+    MISC.GET_MODEL_DIMENSIONS(ENTITY.GET_ENTITY_MODEL(vehicle), min, max)
+    height.y = max.y - min.y
+    height.z = max.z - min.z
+    local posY, posZ = 0.0, 0.0
+
+    if not PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) then
+        entity1 = players.user_ped()
+        if position == 1 then
+            posY = height.y / 3
+            posZ = height.z
+        elseif position == 2 then
+            posY = 0.0
+            posZ = height.z
+        elseif position == 3 then
+            posY = -height.y / 3
+            posZ = height.z
+        end
+    else
+        entity1 = entities.get_user_vehicle_as_handle(false)
+        if position == 1 then
+            posY = height.y
+            posZ = 0.0
+        elseif position == 2 then
+            posY = 0.0
+            posZ = height.z
+        elseif position == 3 then
+            posY = -height.y
+            posZ = 0.0
+        end
+    end
+
+    ENTITY.ATTACH_ENTITY_TO_ENTITY(entity1, vehicle, 0, 0.0, posY, posZ, 0, 0, 0, true, false, true, false, 0, true)
+    if ENTITY.IS_ENTITY_ATTACHED_TO_ENTITY(entity1, vehicle) then
+        util.toast("Success")
+    else
+        util.toast("Failed")
+    end
+end
+
+
 
 function addPlayer(pIdOn)
     -- Boost
@@ -1444,9 +1487,6 @@ end
 
 players.on_join(addPlayer)
 players.dispatch_on_join()
-
-
-
 
 
 
