@@ -23,7 +23,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.6" 
+local SCRIPT_VERSION = "6.1.7" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -105,6 +105,68 @@ local plyList = menu.list(menu.my_root(), "Player")
 local wList = menu.list(menu.my_root(), "World")
 local onList = menu.list(menu.my_root(), "Online")
 local setList = menu.list(menu.my_root(), "Settings")
+
+
+
+-------------------------------------------------------------------------
+-----------------------REMOTE OPTIONS------------------------------------ 
+------------------------------------------------------------------------- 
+
+
+function addPlayer(pIdOn)
+    -- Boost
+	menu.divider(menu.player_root(pIdOn), "CalmBum")
+    local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
+    
+    menu.text_input(rList, "Boosties", {"boost"}, "", function(speed)
+    	local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
+    	if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
+        	local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+            util.toast("Boosting")
+        	for i = 1, 50 do
+            	NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
+            	VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed)
+        	end
+    	end
+	end)
+
+
+    -- Attach to player
+    menu.divider(rList, "Attach to Player")
+    local position = 1
+    menu.slider(rList, "Position", {"Nattachposition"}, "1 = front, 2 = middle, 3 = back", 1, 3, 1, 1, function(val)
+        position = val
+    end)
+    menu.action(rList, "Attach", {}, "", function()
+        if pIdOn ~= players.user() then
+            local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
+            local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+            controlVehicle(vehicle, position)
+        else
+            util.toast("You can't do this on yourself.")
+        end
+    end)
+    menu.action(rList, "Detach", {}, "", function()
+        if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) then
+            local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+            local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+            util.toast("Detach")
+            if ENTITY.IS_ENTITY_ATTACHED(vehicle) then
+                ENTITY.DETACH_ENTITY(vehicle, true, true)
+                util.toast("Detach")
+            end
+        else
+            local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+            if ENTITY.IS_ENTITY_ATTACHED(players.user_ped()) then
+                ENTITY.DETACH_ENTITY(players.user_ped(), true, true)
+            end
+        end
+    end)
+end
+
+
+players.on_join(addPlayer)
+players.dispatch_on_join()
 
 
 --------------------------------
@@ -1328,67 +1390,6 @@ menu.toggle_loop(sphereStuff, "No Traffic Plus v2", {}, "If No Traffic Plus stop
     util.yield(100)
 end)
 
-
--------------------------------------------------------------------------
------------------------REMOTE OPTIONS------------------------------------ 
-------------------------------------------------------------------------- 
-
-
-function addPlayer(pIdOn)
-    -- Boost
-	menu.divider(menu.player_root(pIdOn), "CalmBum")
-    local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
-    
-    menu.text_input(rList, "Boosties", {"boost"}, "", function(speed)
-    	local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
-    	if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
-        	local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-            util.toast("Boosting")
-        	for i = 1, 50 do
-            	NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
-            	VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed)
-        	end
-    	end
-	end)
-
-
-    -- Attach to player
-    menu.divider(rList, "Attach to Player")
-    local position = 1
-    menu.slider(rList, "Position", {"Nattachposition"}, "1 = front, 2 = middle, 3 = back", 1, 3, 1, 1, function(val)
-        position = val
-    end)
-    menu.action(rList, "Attach", {}, "", function()
-        if pIdOn ~= players.user() then
-            local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
-            local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-            controlVehicle(vehicle, position)
-        else
-            util.toast("You can't do this on yourself.")
-        end
-    end)
-    menu.action(rList, "Detach", {}, "", function()
-        if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) then
-            local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
-            local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-            util.toast("Detach")
-            if ENTITY.IS_ENTITY_ATTACHED(vehicle) then
-                ENTITY.DETACH_ENTITY(vehicle, true, true)
-                util.toast("Detach")
-            end
-        else
-            local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
-            if ENTITY.IS_ENTITY_ATTACHED(players.user_ped()) then
-                ENTITY.DETACH_ENTITY(players.user_ped(), true, true)
-            end
-        end
-    end)
-end
-
-
-
-players.on_join(addPlayer)
-players.dispatch_on_join()
 
 
 
