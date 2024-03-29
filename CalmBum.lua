@@ -23,7 +23,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.1.7" 
+local SCRIPT_VERSION = "6.1.8" 
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -111,7 +111,6 @@ local setList = menu.list(menu.my_root(), "Settings")
 -------------------------------------------------------------------------
 -----------------------REMOTE OPTIONS------------------------------------ 
 ------------------------------------------------------------------------- 
-
 
 
 
