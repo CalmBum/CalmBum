@@ -23,7 +23,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.2.1"
+local SCRIPT_VERSION = "6.2.2"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -1524,53 +1524,6 @@ function addPlayer(pIdOn)
         local nuke_height = 70  
         executeNuke(nuke_position, nuke_height)
         func.create_nuke_explosion(nuke_position)
-    end)
-
-    --rocket man--
-    menu.action(rList, "Rocket Man", {}, "", function()
-        if not get_user_car(true) then
-            if not rocket_man_bool then
-                rocket_man_bool = true
-                local position = v3.new()
-                PED.SET_PED_TO_RAGDOLL(PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID()), 2500, 0, 0)
-                local forces = {10, 15, 20, 20, 20, 10, 10, 10, 10, 10, 10}
-                local delays = {1000, 900, 800, 700, 600, 500, 400, 300, 200, 175, 125}
-    
-                local ptfx1 = {"cut_xm3", "cut_xm3_rpg_explosion"}
-                local ptfx2 = {"scr_xm_orbital", "scr_xm_orbital_blast"}
-                
-                for i = 1, #forces do
-                    ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 3, 0.0, 0.0, forces[i], 0.0, 0.0, 0.0, 0, false, false, true, false, false)
-                    position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
-                    GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx1[1])
-                    GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx1[2], position.x, position.y, position.z-0.5, 0, 0, 0, 1.0, false, false, false)
-                    AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Countdown_Beep", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
-                    util.yield(delays[i])
-                end
-    
-                for i = 1, 2 do
-                    local delay = util.current_time_millis() + 500
-                    repeat
-                        ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 3, 0.0, 0.0, 10, 0.0, 0.0, 0.0, 0, false, false, true, false, false)
-                        position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
-                        GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx1[1])
-                        GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx1[2], position.x, position.y, position.z-0.5, 0, 0, 0, 1.0, false, false, false)
-                        AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Countdown_Beep", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
-                        util.yield(i == 1 and 100 or 10)
-                    until delay <= util.current_time_millis()
-                end
-            
-                AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Detonate", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
-                position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
-                GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx2[1])
-                GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx2[2], position.x, position.y, position.z, 0, 180, 0, 1.0, false, false, false)
-                STREAMING.REMOVE_PTFX_ASSET(ptfx1[1])
-                STREAMING.REMOVE_PTFX_ASSET(ptfx2[1])
-                rocket_man_bool = false
-            end
-        else
-            util.toast("You need to be on foot for this option.")
-        end
     end)
 
     --Attach to player--
