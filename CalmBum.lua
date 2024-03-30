@@ -15,8 +15,7 @@ util.keep_running()
 
 -- Loads native functions--
 util.require_natives("1672190175")
-util.require_natives("1676318796")
-util.require_natives("2944a")
+
 
 pId = players.user()
 
@@ -272,12 +271,11 @@ end)
 
 local Npurge = menu.list(vehList, "NOS Purge")
 
+local nos_effect = {"core", "ent_sht_steam", .5}
+local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
+local bone_pos
 
-menu.toggle_loop(Npurge, "NOS Purge Hood", {"NOS_purge"}, "Fleeex with Tab/Square PS/X xbox", function()
-
-  local nos_effect = {"core", "ent_sht_steam", .2}
-  local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
-  local bone_pos
+menu.toggle_loop(Npurge, "Purge Hood", {"NOS_purge"}, "Fleeex with Tab/Square PS/X xbox", function()
 
   if PAD.IS_CONTROL_PRESSED(349, 349) then
     if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
@@ -303,47 +301,38 @@ menu.toggle_loop(Npurge, "NOS Purge Hood", {"NOS_purge"}, "Fleeex with Tab/Squar
   end
 end)
 
-
 --Nos Purge frontend
 
-menu.toggle_loop(Npurge, "NOS Purge Front", {"NOS_Purge_Front"}, "Fleeex with Tab/Square PS/X xbox", function()
-
-    local nos_effect = {"core", "ent_sht_steam", 0.2}
-    local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
-    local bone_pos
+menu.toggle_loop(Npurge, "Purge Front", {"NOS_Purge_Front"}, "Fleeex with Tab/Square PS/X xbox", function()
   
-    if PAD.IS_CONTROL_PRESSED(349, 349) then
-      if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
-      and not ENTITY.IS_ENTITY_DEAD(vehicle, false) then
-        for i = -0.5, 0.5, 1.0 do
-          local bone = ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "wheel_fl")
-          GRAPHICS.USE_PARTICLE_FX_ASSET(nos_effect[1])
-          GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
-            nos_effect[2],
-            vehicle,
-            i, 2, -.12,
-            75, 0, 180 * i,
-            bone,
-            nos_effect[3],
-            false, false, false
-          )
-        end
+  if PAD.IS_CONTROL_PRESSED(349, 349) then
+    if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
+    and not ENTITY.IS_ENTITY_DEAD(vehicle, false) then
+      for i = -0.5, 0.5, 1.0 do
+        local bone = ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "wheel_fl")
+        GRAPHICS.USE_PARTICLE_FX_ASSET(nos_effect[1])
+        GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
+          nos_effect[2],
+          vehicle,
+          i, 2, -.12,
+          75, 0, 180 * i,
+          bone,
+          nos_effect[3],
+          false, false, false
+        )
       end
-      util.yield(500)
-    elseif PAD.IS_CONTROL_RELEASED(349, 349) or PAD.IS_CONTROL_RELEASED(37, 37) then
-      bone_pos = ENTITY.GET_ENTITY_BONE_POSTION(vehicle, ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "bumper_f"))
-      GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 2.5)
     end
-  end)
+    util.yield(500)
+  elseif PAD.IS_CONTROL_RELEASED(349, 349) or PAD.IS_CONTROL_RELEASED(37, 37) then
+    bone_pos = ENTITY.GET_ENTITY_BONE_POSTION(vehicle, ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "bumper_f"))
+    GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 1)
+  end
+end)
 
 
---Nos purge bikes--
-  menu.toggle_loop(Npurge, "NOS Purge Bike", {"NOS_purge_Bike"}, "Fleeex with Tab/Square PS/X xbox", function()
+--NOS purge bike R--
+menu.toggle_loop(Npurge, "Purge Bike R", {"NOS_purge_Bike_R"}, "Fleeex with Tab/Square PS/X xbox", function()
 
-    local nos_effect = {"core", "ent_sht_steam", .2}
-    local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
-    local bone_pos
-  
     if PAD.IS_CONTROL_PRESSED(349, 349) then
       if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
       and not ENTITY.IS_ENTITY_DEAD(vehicle, false) then
@@ -353,8 +342,35 @@ menu.toggle_loop(Npurge, "NOS Purge Front", {"NOS_Purge_Front"}, "Fleeex with Ta
           GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
             nos_effect[2],
             vehicle,
-            0, 0, 0,
-            -90, 0.0, i,
+            .17, -.55, -.35,
+            -60, 60, -60,
+            bone,
+            nos_effect[3],
+            false, false, false
+          )
+        end
+      end
+      util.yield(500)
+    elseif PAD.IS_CONTROL_RELEASED(349, 349) or PAD.IS_CONTROL_RELEASED(37, 37) then
+      bone_pos = ENTITY.GET_ENTITY_BONE_POSTION(vehicle, ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "headlight_l"))
+      GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 1)
+    end
+end)
+
+--NOS purge bike L"
+menu.toggle_loop(Npurge, "Purge Bike L", {"NOS_purge_Bike_R"}, "Fleeex with Tab/Square PS/X xbox", function()
+
+    if PAD.IS_CONTROL_PRESSED(349, 349) then
+      if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
+      and not ENTITY.IS_ENTITY_DEAD(vehicle, false) then
+        for i = -0.5, 0.5, 1.0 do
+          local bone = ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "headlight_l")
+          GRAPHICS.USE_PARTICLE_FX_ASSET(nos_effect[1])
+          GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
+            nos_effect[2],
+            vehicle,
+            -.17, -.55, -.35,
+            -60, -60, 60,
             bone,
             nos_effect[3],
             false, false, false
