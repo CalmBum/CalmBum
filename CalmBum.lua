@@ -1503,28 +1503,7 @@ function addPlayer(pIdOn)
         	end
     	end
 	end)
-    --nukem--
-    menu.action(rList, "Nuke 'em", {"Nukeem"}, "Big boom", function()
-        local hash = util.joaat("prop_military_pickup_01")
-        util.request_model(hash)
-        local player_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(players.user_ped(), 0.0, 0.0, 55.0) -- Spawn nuke 20 meters above the player
     
-        local nuke = entities.create_object(hash, player_pos)
-        ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(nuke, players.user_ped(), false)
-        ENTITY.APPLY_FORCE_TO_ENTITY(nuke, 1, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true) -- Apply downward force to make the nuke fall
-    
-        while not ENTITY.HAS_ENTITY_COLLIDED_WITH_ANYTHING(nuke) do
-            util.yield(0)
-        end
-    
-        local nuke_position = ENTITY.GET_ENTITY_COORDS(nuke, true)
-        entities.delete_by_handle(nuke)
-    
-        
-        local nuke_height = 70  
-        executeNuke(nuke_position, nuke_height)
-        func.create_nuke_explosion(nuke_position)
-    end)
 
     --Attach to player--
     menu.divider(atpList, "Attach to Player")
