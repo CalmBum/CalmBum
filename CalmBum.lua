@@ -23,7 +23,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.2"
+local SCRIPT_VERSION = "6.2.1"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -576,6 +576,55 @@ menu.action(plyList, "Self Defense Nuke ", {"Self Defense Nuke"}, "Nuke that mf 
     func.create_nuke_explosion(nuke_position)
 end)
 
+--Rocket Man--
+
+local rocket_man_bool = false
+
+menu.action(plyList, "Rocket Man", {}, "", function()
+    if not get_user_car(true) then
+        if not rocket_man_bool then
+            rocket_man_bool = true
+            local position = v3.new()
+            PED.SET_PED_TO_RAGDOLL(PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID()), 2500, 0, 0)
+            local forces = {10, 15, 20, 20, 20, 10, 10, 10, 10, 10, 10}
+            local delays = {1000, 900, 800, 700, 600, 500, 400, 300, 200, 175, 125}
+
+            local ptfx1 = {"cut_xm3", "cut_xm3_rpg_explosion"}
+            local ptfx2 = {"scr_xm_orbital", "scr_xm_orbital_blast"}
+            
+            for i = 1, #forces do
+                ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 3, 0.0, 0.0, forces[i], 0.0, 0.0, 0.0, 0, false, false, true, false, false)
+                position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+                GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx1[1])
+                GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx1[2], position.x, position.y, position.z-0.5, 0, 0, 0, 1.0, false, false, false)
+                AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Countdown_Beep", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
+                util.yield(delays[i])
+            end
+
+            for i = 1, 2 do
+                local delay = util.current_time_millis() + 500
+                repeat
+                    ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 3, 0.0, 0.0, 10, 0.0, 0.0, 0.0, 0, false, false, true, false, false)
+                    position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+                    GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx1[1])
+                    GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx1[2], position.x, position.y, position.z-0.5, 0, 0, 0, 1.0, false, false, false)
+                    AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Countdown_Beep", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
+                    util.yield(i == 1 and 100 or 10)
+                until delay <= util.current_time_millis()
+            end
+        
+            AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Detonate", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
+            position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+            GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx2[1])
+            GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx2[2], position.x, position.y, position.z, 0, 180, 0, 1.0, false, false, false)
+            STREAMING.REMOVE_PTFX_ASSET(ptfx1[1])
+            STREAMING.REMOVE_PTFX_ASSET(ptfx2[1])
+            rocket_man_bool = false
+        end
+    else
+        util.toast("You need to be on foot for this option.")
+    end
+end)
 
 -----------------------------------
 --Online---------------------------
@@ -1429,10 +1478,19 @@ end
 
 
 
+-------------------------------------------------------------------------
+-----------------------REMOTE OPTIONS------------------------------------ 
+------------------------------------------------------------------------- 
+
+
+
+
 function addPlayer(pIdOn)
-    -- Boost
+    --Boosties--
 	menu.divider(menu.player_root(pIdOn), "CalmBum")
+
     local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
+    local atpList = menu.list(rList, "Attach To Player")
     
     menu.text_input(rList, "Boosties", {"boost"}, "", function(speed)
     	local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
@@ -1445,15 +1503,83 @@ function addPlayer(pIdOn)
         	end
     	end
 	end)
+    --nukem--
+    menu.action(rList, "Nuke 'em", {"Nukeem"}, "Big boom", function()
+        local hash = util.joaat("prop_military_pickup_01")
+        util.request_model(hash)
+        local player_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(players.user_ped(), 0.0, 0.0, 55.0) -- Spawn nuke 20 meters above the player
+    
+        local nuke = entities.create_object(hash, player_pos)
+        ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(nuke, players.user_ped(), false)
+        ENTITY.APPLY_FORCE_TO_ENTITY(nuke, 1, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true) -- Apply downward force to make the nuke fall
+    
+        while not ENTITY.HAS_ENTITY_COLLIDED_WITH_ANYTHING(nuke) do
+            util.yield(0)
+        end
+    
+        local nuke_position = ENTITY.GET_ENTITY_COORDS(nuke, true)
+        entities.delete_by_handle(nuke)
+    
+        
+        local nuke_height = 70  
+        executeNuke(nuke_position, nuke_height)
+        func.create_nuke_explosion(nuke_position)
+    end)
 
+    --rocket man--
+    menu.action(rList, "Rocket Man", {}, "", function()
+        if not get_user_car(true) then
+            if not rocket_man_bool then
+                rocket_man_bool = true
+                local position = v3.new()
+                PED.SET_PED_TO_RAGDOLL(PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID()), 2500, 0, 0)
+                local forces = {10, 15, 20, 20, 20, 10, 10, 10, 10, 10, 10}
+                local delays = {1000, 900, 800, 700, 600, 500, 400, 300, 200, 175, 125}
+    
+                local ptfx1 = {"cut_xm3", "cut_xm3_rpg_explosion"}
+                local ptfx2 = {"scr_xm_orbital", "scr_xm_orbital_blast"}
+                
+                for i = 1, #forces do
+                    ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 3, 0.0, 0.0, forces[i], 0.0, 0.0, 0.0, 0, false, false, true, false, false)
+                    position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+                    GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx1[1])
+                    GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx1[2], position.x, position.y, position.z-0.5, 0, 0, 0, 1.0, false, false, false)
+                    AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Countdown_Beep", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
+                    util.yield(delays[i])
+                end
+    
+                for i = 1, 2 do
+                    local delay = util.current_time_millis() + 500
+                    repeat
+                        ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 3, 0.0, 0.0, 10, 0.0, 0.0, 0.0, 0, false, false, true, false, false)
+                        position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+                        GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx1[1])
+                        GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx1[2], position.x, position.y, position.z-0.5, 0, 0, 0, 1.0, false, false, false)
+                        AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Countdown_Beep", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
+                        util.yield(i == 1 and 100 or 10)
+                    until delay <= util.current_time_millis()
+                end
+            
+                AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Detonate", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
+                position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+                GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx2[1])
+                GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx2[2], position.x, position.y, position.z, 0, 180, 0, 1.0, false, false, false)
+                STREAMING.REMOVE_PTFX_ASSET(ptfx1[1])
+                STREAMING.REMOVE_PTFX_ASSET(ptfx2[1])
+                rocket_man_bool = false
+            end
+        else
+            util.toast("You need to be on foot for this option.")
+        end
+    end)
 
-    -- Attach to player
-    menu.divider(rList, "Attach to Player")
+    --Attach to player--
+    menu.divider(atpList, "Attach to Player")
     local position = 1
-    menu.slider(rList, "Position", {"Nattachposition"}, "1 = front, 2 = middle, 3 = back", 1, 3, 1, 1, function(val)
+    menu.slider(atpList, "Position", {"Nattachposition"}, "1 = front, 2 = middle, 3 = back", 1, 3, 1, 1, function(val)
         position = val
     end)
-    menu.action(rList, "Attach", {}, "", function()
+    menu.action(atpList, "Attach", {}, "", function()
         if pIdOn ~= players.user() then
             local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
             if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
@@ -1467,7 +1593,8 @@ function addPlayer(pIdOn)
         end
     end)
 
-    menu.action(rList, "Detach", {}, "", function()
+    --detach--
+    menu.action(atpList, "Detach", {}, "", function()
         if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) then
             local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
             local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
@@ -1484,6 +1611,8 @@ function addPlayer(pIdOn)
         end
     end)
 end
+
+
 
 players.on_join(addPlayer)
 players.dispatch_on_join()
