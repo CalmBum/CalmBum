@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.2.4"
+local SCRIPT_VERSION = "6.2.5"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -331,7 +331,7 @@ menu.toggle_loop(Npurge, "Purge Front", {"NOS_Purge_Front"}, "Fleeex with Tab/Sq
     util.yield(500)
   elseif PAD.IS_CONTROL_RELEASED(349, 349) or PAD.IS_CONTROL_RELEASED(37, 37) then
     bone_pos = ENTITY.GET_ENTITY_BONE_POSTION(vehicle, ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "bumper_f"))
-    GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 1)
+    GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 2)
   end
 end)
 
