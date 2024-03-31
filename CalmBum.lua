@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.2.3"
+local SCRIPT_VERSION = "6.2.4"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -271,11 +271,13 @@ end)
 
 local Npurge = menu.list(vehList, "NOS Purge")
 
-local nos_effect = {"core", "ent_sht_steam", .5}
-local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
-local bone_pos
+
 
 menu.toggle_loop(Npurge, "Purge Hood", {"NOS_purge"}, "Fleeex with Tab/Square PS/X xbox", function()
+
+    local nos_effect = {"core", "ent_sht_steam", .5}
+    local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
+    local bone_pos
 
   if PAD.IS_CONTROL_PRESSED(349, 349) then
     if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
@@ -304,6 +306,10 @@ end)
 --Nos Purge frontend
 
 menu.toggle_loop(Npurge, "Purge Front", {"NOS_Purge_Front"}, "Fleeex with Tab/Square PS/X xbox", function()
+
+    local nos_effect = {"core", "ent_sht_steam", .5}
+    local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
+    local bone_pos
   
   if PAD.IS_CONTROL_PRESSED(349, 349) then
     if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
@@ -330,8 +336,12 @@ menu.toggle_loop(Npurge, "Purge Front", {"NOS_Purge_Front"}, "Fleeex with Tab/Sq
 end)
 
 
---NOS purge bike R--
+--Nos purge bikes--
 menu.toggle_loop(Npurge, "Purge Bike R", {"NOS_purge_Bike_R"}, "Fleeex with Tab/Square PS/X xbox", function()
+
+    local nos_effect = {"core", "ent_sht_steam", .5}
+    local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
+    local bone_pos
 
     if PAD.IS_CONTROL_PRESSED(349, 349) then
       if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
@@ -357,8 +367,11 @@ menu.toggle_loop(Npurge, "Purge Bike R", {"NOS_purge_Bike_R"}, "Fleeex with Tab/
     end
 end)
 
---NOS purge bike L"
 menu.toggle_loop(Npurge, "Purge Bike L", {"NOS_purge_Bike_R"}, "Fleeex with Tab/Square PS/X xbox", function()
+
+    local nos_effect = {"core", "ent_sht_steam", .5}
+    local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
+    local bone_pos
 
     if PAD.IS_CONTROL_PRESSED(349, 349) then
       if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
@@ -383,6 +396,7 @@ menu.toggle_loop(Npurge, "Purge Bike L", {"NOS_purge_Bike_R"}, "Fleeex with Tab/
       GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 1)
     end
 end)
+
 
 
 -- Nitros
