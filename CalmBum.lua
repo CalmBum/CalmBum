@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.3"
+local SCRIPT_VERSION = "6.3.1"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -1351,7 +1351,10 @@ menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Ser
 
 
 
---No Traffic--
+
+
+--No Traffic Plus--
+
 
 local notList = menu.list(menu.my_root(), "No Traffic")
 
