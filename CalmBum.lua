@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.2.5"
+local SCRIPT_VERSION = "6.3"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -242,7 +242,6 @@ end)
 
 --Horn Spam
 
-
 menu.toggle_loop(vehList, "Horn Spam", {"horn_spam"}, "Autistic R2D2", function(toggle)
     if get_user_car() ~= 0 and PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), true) then
       VEHICLE.SET_VEHICLE_MOD(get_user_car(), 14, math.random(0, 51), false)
@@ -250,7 +249,24 @@ menu.toggle_loop(vehList, "Horn Spam", {"horn_spam"}, "Autistic R2D2", function(
       util.yield(50)
       PAD.SET_CONTROL_VALUE_NEXT_FRAME(2, 86, 0.0)
     end
-  end)
+end)
+
+--Horn Hop--
+
+local hornHopForce = 1
+
+menu.toggle_loop(vehList, "Horn Hop", {}, "", function()
+    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_PRESSED(86, 86) then
+        util.toast("running")
+        local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+        ENTITY.APPLY_FORCE_TO_ENTITY(vehicle, .5, 0.0, 0.0, hornHopForce, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
+    end
+end)
+    
+menu.slider(vehList, "Horn Hop Force", {}, "", 1, 100, hornHopForce, 1, function(value)
+    hornHopForce = value
+end)
 
 
 --Countermeasures (flares)
@@ -271,43 +287,66 @@ end)
 
 local Npurge = menu.list(vehList, "NOS Purge")
 
+ 
+-- Define a table to store the effect settings
+local effect_settings = {
+    purge_size = 0.5,
+    nos_effect = {"core", "ent_sht_steam", 0.5}
+}
 
+local max_purge_size = 1 
+
+menu.text_input(Npurge, "Purge Size", {"Purge_Size"}, ".1-1", function(value)
+
+  local purge_size = tonumber(value)
+
+  if purge_size > max_purge_size then
+    util.toast("Too much NOS m8")
+    purge_size = max_purge_size
+  end
+
+  effect_settings.purge_size = purge_size
+  effect_settings.nos_effect[3] = purge_size
+
+end)
 
 menu.toggle_loop(Npurge, "Purge Hood", {"NOS_purge"}, "Fleeex with Tab/Square PS/X xbox", function()
 
-    local nos_effect = {"core", "ent_sht_steam", .5}
+    local nos_effect = effect_settings.nos_effect -- Use the nos_effect from the effect_settings table
     local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
     local bone_pos
-
-  if PAD.IS_CONTROL_PRESSED(349, 349) then
-    if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
-    and not ENTITY.IS_ENTITY_DEAD(vehicle, false) then
-      for i = -0.5, 0.5, 1.0 do
-        local bone = ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "windscreen")
-        GRAPHICS.USE_PARTICLE_FX_ASSET(nos_effect[1])
-        GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
-          nos_effect[2],
-          vehicle,
-          i, 0.5, -0.25,
-          50.0, 0.0, 50*i,
-          bone,
-          nos_effect[3],
-          false, false, false
-        )
-      end
+    
+    if PAD.IS_CONTROL_PRESSED(349, 349) then
+        if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) 
+        and not ENTITY.IS_ENTITY_DEAD(vehicle, false) then
+          for i = -0.5, 0.5, 1.0 do
+            local bone = ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "windscreen")
+            GRAPHICS.USE_PARTICLE_FX_ASSET(nos_effect[1])
+            GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
+              nos_effect[2],
+              vehicle,
+              i, 0.5, -0.25,
+              50.0, 0.0, 50*i,
+              bone,
+              nos_effect[3],
+              false, false, false
+            )
+          end
+        end
+        util.yield(500)
+      elseif PAD.IS_CONTROL_RELEASED(349, 349) or PAD.IS_CONTROL_RELEASED(37, 37) then
+        bone_pos = ENTITY.GET_ENTITY_BONE_POSTION(vehicle, ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "windscreen"))
+        GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 1)
     end
-    util.yield(500)
-  elseif PAD.IS_CONTROL_RELEASED(349, 349) or PAD.IS_CONTROL_RELEASED(37, 37) then
-    bone_pos = ENTITY.GET_ENTITY_BONE_POSTION(vehicle, ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "windscreen"))
-    GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 1)
-  end
+    
+    
 end)
 
 --Nos Purge frontend
 
 menu.toggle_loop(Npurge, "Purge Front", {"NOS_Purge_Front"}, "Fleeex with Tab/Square PS/X xbox", function()
 
-    local nos_effect = {"core", "ent_sht_steam", .5}
+    local nos_effect = effect_settings.nos_effect 
     local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
     local bone_pos
   
@@ -339,7 +378,7 @@ end)
 --Nos purge bikes--
 menu.toggle_loop(Npurge, "Purge Bike R", {"NOS_purge_Bike_R"}, "Fleeex with Tab/Square PS/X xbox", function()
 
-    local nos_effect = {"core", "ent_sht_steam", .5}
+    local nos_effect = effect_settings.nos_effect 
     local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
     local bone_pos
 
@@ -1331,6 +1370,53 @@ end)
 function noTraffic(trafficOff)
     if trafficOff then
         -- Only create a new sphere if one doesn't already exist
+        if pop_multiplier_id == nil or MISC.DOES_POP_MULTIPLIER_SPHERE_EXIST(0) then
+            pop_multiplier_id = MISC.ADD_POP_MULTIPLIER_SPHERE(0, 0, -100, 20000, 0, 0, false, true)
+            MISC.CLEAR_AREA(0, 0, -100, 19999.9, true, false, false, true)
+            --util.toast("Created sphere")
+            --util.toast(pop_multiplier_id)
+        end
+
+        -- only sphere 0 is global, others dont matter
+        if pop_multiplier_id != 0 then
+            clearSphere()
+            pop_multiplier_id = nil
+        end
+
+        directx.draw_text(0.02, 0.02, string.format("Clearing"), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
+    else
+        -- remove any potential spheres (15 is max and ive only seen id's of -1 or 0 so this is excessive just to be safe)
+        --util.toast("Removing any spheres")
+        clearSphere()
+    end
+end
+
+function clearSphere()
+    for i = -10, 10 do
+        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, false)
+        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, true)
+    end
+end
+
+
+
+--No Traffic Plus--
+
+
+local notList = menu.list(menu.my_root(), "No Traffic")
+
+
+local pop_multiplier_id = nil
+
+menu.toggle_loop(notList, "No Traffic", {}, "Clear the world of traffic, globally.", function()
+    noTraffic(true)
+end, function()             
+    noTraffic(false)
+end)
+
+function noTraffic(trafficOff)
+    if trafficOff then
+        -- Only create a new sphere if one doesn't already exist
         if pop_multiplier_id == nil or !MISC.DOES_POP_MULTIPLIER_SPHERE_EXIST(0) then
             pop_multiplier_id = MISC.ADD_POP_MULTIPLIER_SPHERE(0, 0, -100, 20000, 0, 0, false, true)
             MISC.CLEAR_AREA(0, 0, -100, 19999.9, true, false, false, true)
@@ -1363,51 +1449,23 @@ end
 
 --No Traffic Plus--
 
-menu.toggle_loop(sphereStuff, "No Traffic Plus", {}, "Extra OP No traffic option", function()
-    noAnything(true)
-end, function()
-    noAnything(false)
-end)
-
-local anything_multiplier_id = nil
-
-function noAnything(clearAll)
-    if clearAll then
-        -- Only create a new sphere if one doesn't already exist
-        if anything_multiplier_id == nil or not MISC.DOES_POP_MULTIPLIER_SPHERE_EXIST(anything_multiplier_id) then
-            anything_multiplier_id = MISC.ADD_POP_MULTIPLIER_SPHERE(0, 0, -100, 20000, 0, 0, false, true)
-            MISC.CLEAR_AREA(0, 0, -100, 19999.9, true, false, false, true)
-        end
-
-        -- Clear the area again to remove any remaining entities
-        MISC.CLEAR_AREA(1.1, 1.1, 1.1, 19999.9, true, false, false, true)
-        util.yield(100)
-
-        -- Only sphere 0 is global, others don't matter
-        if anything_multiplier_id != 0 then
-            clearSphere()
-            anything_multiplier_id = nil
-        end
-
-        directx.draw_text(0.02, 0.02, string.format("Clearing Plus"), 5, .5, {r = 1, g = 0, b = 0, a = 1}, true)
-    else
-        -- Remove any potential spheres (15 is max and I've only seen IDs of -1 or 0, so this is excessive just to be safe)
-        clearSphere()
-    end
-end
-
-function clearSphere()
-    for i = -10, 10 do
-        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, false)
-        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, true)
-    end
-end
-
-menu.toggle_loop(sphereStuff, "No Traffic Plus v2", {}, "If No Traffic Plus stops working, use this", function()
-    MISC.CLEAR_AREA(1.1, 1.1, 1.1, 19999.9, true, false, false, true)
-    directx.draw_text(0.02, 0.02, string.format("Clearing"), 5, .5, {r = 1, g = 0, b = 0, a = 1}, true)
+menu.toggle_loop(notList, "No Traffic Plus", {}, "If No Traffic breaks go with this one", function()
+    MISC.CLEAR_AREA_OF_VEHICLES(0, 0, 0, 19999.9, false, false, false, false, false, false, false)
+    MISC.CLEAR_AREA_OF_PEDS(0, 0, 0, 19999.9, 1)
+    directx.draw_text(0.02, 0.02, string.format("Clearing Plus"), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
     util.yield(100)
 end)
+
+
+
+
+menu.toggle_loop(notList, "No Traffic Plus v2", {}, "WARNING! This clears ALL entities!", function()
+    MISC.CLEAR_AREA(1.1, 1.1, 1.1, 19999.9, true, false, false, true)
+    directx.draw_text(0.02, 0.02, string.format("Clearing Plus v2"), 5, .5, {r = 1, g = 0, b = 0, a = 1}, true)
+    util.yield(100)
+end)
+
+
 
 
 
