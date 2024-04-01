@@ -1351,57 +1351,7 @@ menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Ser
 
 
 
-
-
---No Traffic-- 
-
-
-local sphereStuff = menu.list(menu.my_root(), "No Traffic")
-
-
-local pop_multiplier_id = nil
-
-menu.toggle_loop(sphereStuff, "No Traffic", {}, "Clear the world of traffic, globally.", function()
-    noTraffic(true)
-end, function()             
-    noTraffic(false)
-end)
-
-function noTraffic(trafficOff)
-    if trafficOff then
-        -- Only create a new sphere if one doesn't already exist
-        if pop_multiplier_id == nil or MISC.DOES_POP_MULTIPLIER_SPHERE_EXIST(0) then
-            pop_multiplier_id = MISC.ADD_POP_MULTIPLIER_SPHERE(0, 0, -100, 20000, 0, 0, false, true)
-            MISC.CLEAR_AREA(0, 0, -100, 19999.9, true, false, false, true)
-            --util.toast("Created sphere")
-            --util.toast(pop_multiplier_id)
-        end
-
-        -- only sphere 0 is global, others dont matter
-        if pop_multiplier_id != 0 then
-            clearSphere()
-            pop_multiplier_id = nil
-        end
-
-        directx.draw_text(0.02, 0.02, string.format("Clearing"), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-    else
-        -- remove any potential spheres (15 is max and ive only seen id's of -1 or 0 so this is excessive just to be safe)
-        --util.toast("Removing any spheres")
-        clearSphere()
-    end
-end
-
-function clearSphere()
-    for i = -10, 10 do
-        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, false)
-        MISC.REMOVE_POP_MULTIPLIER_SPHERE(i, true)
-    end
-end
-
-
-
---No Traffic Plus--
-
+--No Traffic--
 
 local notList = menu.list(menu.my_root(), "No Traffic")
 
