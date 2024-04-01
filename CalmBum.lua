@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.3.1"
+local SCRIPT_VERSION = "6.3.2"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -258,7 +258,6 @@ local hornHopForce = 1
 menu.toggle_loop(vehList, "Horn Hop", {}, "", function()
     local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
     if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_PRESSED(86, 86) then
-        util.toast("running")
         local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
         ENTITY.APPLY_FORCE_TO_ENTITY(vehicle, .5, 0.0, 0.0, hornHopForce, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
     end
