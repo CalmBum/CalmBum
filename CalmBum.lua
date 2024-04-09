@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.3.3"
+local SCRIPT_VERSION = "6.4"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -216,6 +216,33 @@ menu.text_input(speedMods, "Set Torque", {"Set_Torque"}, "Set multiplier value",
     torqueMult = val
 end, 2)
 
+--Clutch Kick--
+
+local clutchKick = false
+local clutchCounter = 0
+
+menu.toggle_loop(vehList, "Auto Clutch Kick", {}, "Clutch kick no more! Every time you hit the gas this will clutch kick for you", function()
+    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_JUST_PRESSED(71, 71) then
+        clutchKick = true
+    end
+end)
+
+util.create_tick_handler(function()
+    if clutchKick then
+        if clutchCounter == 0 then
+            clutchCounter = 1
+            PAD.SET_CONTROL_VALUE_NEXT_FRAME(71, 71, 0)
+        elseif clutchCounter > 0 and clutchCounter < 5 then
+            PAD.SET_CONTROL_VALUE_NEXT_FRAME(76, 76, 1)
+            clutchCounter += 1
+        elseif clutchCounter == 5 then
+            clutchCounter = 0
+            PAD.SET_CONTROL_VALUE_NEXT_FRAME(71, 71, 1)
+            clutchKick = false
+        end
+    end
+end)
 
 -- Stick to the ground
 
@@ -1162,6 +1189,18 @@ menu.toggle_loop(onList, "Button Pressure Overlay" , {"Button Pressure Overlay"}
         directx.draw_rect(center_x + 0.01, center_y, 0.005, -PAD.GET_CONTROL_NORMAL(90, 90)/10, {r = 1, g = 1, b = 0, a = 1}) 
         -- steering
         directx.draw_rect(center_x - 0.0025, center_y - 0.115, math.max(PAD.GET_CONTROL_NORMAL(146, 146)/20), 0.01, {r = 0, g = 0.5, b = 1, a =1 })
+    end
+end)
+
+--Drift Cam Assist--
+
+menu.toggle_loop(onList, "Drift Cam Assist", {}, "Prevents the camera from going crazy every time you tap ebrake", function()
+    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+    local moving = ENTITY.GET_ENTITY_VELOCITY(get_user_car_id())
+    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and (math.abs(moving.x) > 1 or math.abs(moving.y) > 1) and PAD.GET_CONTROL_NORMAL(1, 1) == 0 then
+        PAD.SET_CONTROL_VALUE_NEXT_FRAME(2, 2, -0.26)
+    elseif !PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
+        util.toast("Player is not in a vehicle")
     end
 end)
 
