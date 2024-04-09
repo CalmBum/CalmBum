@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.4"
+local SCRIPT_VERSION = "6.4.1"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -749,7 +749,7 @@ tables.stations = {
     "RADIO_21_DLC_XM17",
     "RADIO_22_DLC_BATTLE_MIX1_RADIO",
     "RADIO_23_DLC_XM19_RADIO",
-    "RADIO_19_USER",
+    "RADIO_37_MOTOMAMI",
     "RADIO_01_CLASS_ROCK",
     "RADIO_02_POP",
     "RADIO_03_HIPHOP_NEW",
