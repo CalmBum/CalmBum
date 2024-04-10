@@ -54,13 +54,13 @@ local auto_update_config = {
     dependencies={
       {
         name="Jackface",
-        source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum/Jackface.png",
-        script_relpath="CalmBum/Jackface.png",
+        source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/resources/CalmBum/Jackface.png",
+        script_relpath="resources/CalmBum/Jackface.png",
       },
       {
         name="Jackface2",
-        source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/CalmBum/Jackface2.png",
-        script_relpath="CalmBum/Jackface2.png",
+        source_url="https://raw.githubusercontent.com/CalmBum/CalmBum/main/resources/CalmBum/Jackface2.png",
+        script_relpath="resources/CalmBum/Jackface2.png",
       },
     }
 }
@@ -1420,8 +1420,8 @@ end)
 ------------------
 
 if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
-    local jackFace1 = filesystem.scripts_dir() .. '/lib/calmbum/jackface.png'
-    local jackFace2 = filesystem.scripts_dir() .. '/lib/calmbum/jackface2.png'
+    local jackFace1 = filesystem.resources_dir() .. '/CalmBum/jackface.png'
+    local jackFace2 = filesystem.resources_dir() .. '/CalmBum/jackface2.png'
     local imageStatus1, image1 = pcall(directx.create_texture, jackFace1)
     local imageStatus2, image2 = pcall(directx.create_texture, jackFace2)
     if not imageStatus1 then
