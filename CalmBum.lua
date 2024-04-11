@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.4.1"
+local SCRIPT_VERSION = "6.4.2"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -193,9 +193,12 @@ local speedMods = menu.list(vehList, "Speed Mods")
 --Boosties--
 
 menu.text_input(speedMods, "Boosties", {"Boosties"}, "Modifies the vehicles top speed + power", function(speed)
-  vehicle = get_user_car_id()
-    for i = 1, 50 do
-      VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed)
+    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
+        local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+        if tonumber(speed) != nil then
+            VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed) 
+        end
     end
 end)
 
@@ -218,25 +221,24 @@ end, 2)
 
 --Clutch Kick--
 
+
 local clutchKick = false
 local clutchCounter = 0
 
-menu.toggle_loop(vehList, "Auto Clutch Kick", {}, "Clutch kick no more! Every time you hit the gas this will clutch kick for you", function()
+menu.toggle_loop(speedMods, "Auto Clutch Kick", {}, "Clutch kick no more! Every time you hit the gas this will clutch kick for you", function()
     local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
-    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_JUST_PRESSED(71, 71) then
+    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_JUST_PRESSED(71, 71) and (math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).x) > 10 or math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).y) > 10) then
         clutchKick = true
     end
 end)
 
 util.create_tick_handler(function()
     if clutchKick then
-        if clutchCounter == 0 then
-            clutchCounter = 1
-            PAD.SET_CONTROL_VALUE_NEXT_FRAME(71, 71, 0)
-        elseif clutchCounter > 0 and clutchCounter < 5 then
+        if clutchCounter >= 0 and clutchCounter < 3 then
+            util.toast("Kick")
             PAD.SET_CONTROL_VALUE_NEXT_FRAME(76, 76, 1)
             clutchCounter += 1
-        elseif clutchCounter == 5 then
+        elseif clutchCounter == 3 then
             clutchCounter = 0
             PAD.SET_CONTROL_VALUE_NEXT_FRAME(71, 71, 1)
             clutchKick = false
@@ -1513,21 +1515,23 @@ function addPlayer(pIdOn)
     local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
     local atpList = menu.list(rList, "Attach To Player")
     
-    menu.text_input(rList, "Boosties", {"boost"}, "", function(speed)
-    	local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
-    	if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
-        	local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-            util.toast("Boosting")
-        	for i = 1, 50 do
-            	NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
-            	VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed)
-        	end
-    	end
-	end)
+    menu.text_input(rList, "Boosties", {"Boosties"}, "Modifies the vehicles top speed + power", function(speed)
+        local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+        if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
+            local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+            if tonumber(speed) != nil then
+                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed) 
+            end
+        end
+    end)
+
+
+    
+      
     
 
     --Attach to player--
-    menu.divider(atpList, "Attach to Player")
+    menu.divider(atpList, "Attach to Vehicle")
     local position = 1
     menu.slider(atpList, "Position", {"Nattachposition"}, "1 = front, 2 = middle, 3 = back", 1, 3, 1, 1, function(val)
         position = val
