@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.4.2"
+local SCRIPT_VERSION = "6.4.3"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -1422,8 +1422,8 @@ end)
 ------------------
 
 if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
-    local jackFace1 = filesystem.scripts_dir() .. '/lib/calmbum/jackface.png'
-    local jackFace2 = filesystem.scripts_dir() .. '/lib/calmbum/jackface2.png'
+    local jackFace1 = filesystem.scripts_dir() .. '/resources/calmbum/jackface.png'
+    local jackFace2 = filesystem.scripts_dir() .. '/resources/calmbum/jackface2.png'
     local imageStatus1, image1 = pcall(directx.create_texture, jackFace1)
     local imageStatus2, image2 = pcall(directx.create_texture, jackFace2)
     if not imageStatus1 then
