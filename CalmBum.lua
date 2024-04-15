@@ -235,7 +235,6 @@ end)
 util.create_tick_handler(function()
     if clutchKick then
         if clutchCounter >= 0 and clutchCounter < 3 then
-            util.toast("Kick")
             PAD.SET_CONTROL_VALUE_NEXT_FRAME(76, 76, 1)
             clutchCounter += 1
         elseif clutchCounter == 3 then
