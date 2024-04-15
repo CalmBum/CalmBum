@@ -192,7 +192,7 @@ local speedMods = menu.list(vehList, "Speed Mods")
 
 --Boosties--
 
-menu.text_input(speedMods, "Boosties", {"Boosties"}, "Modifies the vehicles top speed + power", function(speed)
+menu.text_input(speedMods, "Boosties", {"Boost_"}, "Modifies the vehicles top speed + power", function(speed)
     local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
     if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
         local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
@@ -1515,7 +1515,7 @@ function addPlayer(pIdOn)
     local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
     local atpList = menu.list(rList, "Attach To Player")
     
-    menu.text_input(rList, "Boosties", {"Boosties"}, "Modifies the vehicles top speed + power", function(speed)
+    menu.text_input(rList, "Remote Boosties", {"R_Boost"}, "Modifies the vehicles top speed + power", function(speed)
         local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
         if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
             local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
