@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.4.4"
+local SCRIPT_VERSION = "6.4.5"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -1514,23 +1514,26 @@ function addPlayer(pIdOn)
     local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
     local atpList = menu.list(rList, "Attach To Player")
     
-    menu.text_input(rList, "Remote Boosties", {"R_Boost"}, "Modifies the vehicles top speed + power", function(speed)
-        local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+    menu.text_input(rList, "Remote Boosties", {"R_Boosties"}, "", function(speed)
+        local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
         if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
             local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+            util.toast("Boosting")
             if tonumber(speed) != nil then
-                VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed) 
+                for i = 1, 50 do
+                    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
+                    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed)
+                end
+                entities.give_control(vehicle, pIdOn)
             end
+        else
+            util.toast("Player is not in a vehicle or too far away")
         end
     end)
 
 
-    
-      
-    
-
     --Attach to player--
-    menu.divider(atpList, "Attach to Vehicle")
+    menu.divider(atpList, "Attach to Player")
     local position = 1
     menu.slider(atpList, "Position", {"Nattachposition"}, "1 = front, 2 = middle, 3 = back", 1, 3, 1, 1, function(val)
         position = val
