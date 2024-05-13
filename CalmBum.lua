@@ -22,7 +22,7 @@ pId = players.user()
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.4.5"
+local SCRIPT_VERSION = "6.4.3"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -235,6 +235,7 @@ end)
 util.create_tick_handler(function()
     if clutchKick then
         if clutchCounter >= 0 and clutchCounter < 3 then
+            util.toast("Kick")
             PAD.SET_CONTROL_VALUE_NEXT_FRAME(76, 76, 1)
             clutchCounter += 1
         elseif clutchCounter == 3 then
@@ -559,14 +560,17 @@ end)
   
   
 --Player Shit
-  
+
 menu.action(plyList, "Take A Shit", {"shit"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
-    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
-    if not PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
-        STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
+
+  local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
+  if not PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
+    STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
+    STREAMING.REQUEST_ANIM_DICT("shit_loop_trev")
         while not STREAMING.HAS_ANIM_DICT_LOADED("missfbi3ig_0") do
             util.yield(0)
             STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
+      STREAMING.REQUEST_ANIM_DICT("shit_loop_trev")
         end
         TASK.TASK_PLAY_ANIM(PLAYER.GET_PLAYER_PED(pId), "missfbi3ig_0", "shit_loop_trev", 8.0, 8.0, 2000, 0.0, 0.0, true, true, true)
         util.yield(1500)
@@ -574,7 +578,7 @@ menu.action(plyList, "Take A Shit", {"shit"}, "You see that ugly ass car? Go pop
         NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(object_)
         ENTITY.APPLY_FORCE_TO_ENTITY(object_, 3, 0, 0, -10, 0, 0, 0, false, false)
     end
-end)    
+end)
   
   
 --EWO--
@@ -1421,8 +1425,8 @@ end)
 ------------------
 
 if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
-    local jackFace1 = filesystem.scripts_dir() .. '/resources/calmbum/jackface.png'
-    local jackFace2 = filesystem.scripts_dir() .. '/resources/calmbum/jackface2.png'
+    local jackFace1 = filesystem.scripts_dir() .. '/lib/calmbum/jackface.png'
+    local jackFace2 = filesystem.scripts_dir() .. '/lib/calmbum/jackface2.png'
     local imageStatus1, image1 = pcall(directx.create_texture, jackFace1)
     local imageStatus2, image2 = pcall(directx.create_texture, jackFace2)
     if not imageStatus1 then
@@ -1505,6 +1509,8 @@ function controlVehicle(vehicle, position)
         util.toast("Failed")
     end
 end
+
+
 
 
 function addPlayer(pIdOn)
