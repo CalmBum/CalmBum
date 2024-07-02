@@ -9,16 +9,12 @@
 
 --Thank you to Lance, Wiri, Jinx, Nova, Jacks, Jerry, Dolos, and especially Hexarobi for some of this code--
 
-
--- idk keeps stuff running?
-util.keep_running()
-
 -- Loads native functions--
 util.require_natives("1672190175")
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.5"
+local SCRIPT_VERSION = "6.4.3"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -182,12 +178,18 @@ local speedMods = menu.list(vehList, "Speed Mods")
 
 --Boosties------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-menu.text_input(speedMods, "Boosties", {"Boost_"}, "Modifies the vehicles top speed + power", function(speed)
+menu.text_input(speedMods, "Boosties", {"boosties"}, "Modifies the vehicles top speed + power", function(speed, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 then
+        return
+    end
     local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
     if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
         local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
         if tonumber(speed) != nil then
+            util.toast("Boosting")
             VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed) 
+        else
+            return
         end
     end
 end)
@@ -336,7 +338,7 @@ menu.toggle_loop(Npurge, "Purge Bike R", {"NOS_purge_Bike_R"}, "Fleeex with Tab/
     end
 end)
 
-menu.toggle_loop(Npurge, "Purge Bike L", {"NOS_purge_Bike_R"}, "Fleeex with Tab/Square PS/X xbox", function()
+menu.toggle_loop(Npurge, "Purge Bike L", {"NOS_purge_Bike_L"}, "Fleeex with Tab/Square PS/X xbox", function()
     local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
 
     if PAD.IS_CONTROL_PRESSED(349, 349) then
@@ -415,6 +417,7 @@ local maxLongitude = 0.01
 local xCenterG = 0.25
 local yCenterG = 0.9
 local gForceOn = false
+local showMaxG = false
 
 menu.toggle_loop(gforce, "G-Force Meter" , {"gforce"}, "calculate da gfroce", function()
     gForceOn = true
@@ -442,10 +445,6 @@ menu.toggle_loop(gforce, "G-Force Meter" , {"gforce"}, "calculate da gfroce", fu
         xOffset = forceSide * resizeForce
         yOffset = forceForw * resizeForce
 
-        -- debug
-        --directx.draw_text(0.1, 0.10, string.format("Force Side = %f", forceSide), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-        --directx.draw_text(0.1, 0.12, string.format("Force Forward = %f", forceForw), 5, .5, {r = 1, g = 0, b = 0, a =1 }, true)
-
         -- set old vel for change in vel calc
         oldForce = newForce
 
@@ -460,41 +459,47 @@ end, function()
     gForceOn = false
 end)
 
+-- shoutout chatgpt for the math i dont understand
+function clampToEllipse(x, y, centerX, centerY, radiusX, radiusY)
+    local dx = x - centerX
+    local dy = y - centerY
+    
+    local distance = (dx * dx) / (radiusX * radiusX) + (dy * dy) / (radiusY * radiusY)
+    
+    if distance > 1 then
+        local angle = math.atan2(dy, dx)
+        dx = radiusX * math.cos(angle)
+        dy = radiusY * math.sin(angle)
+    end
+    
+    return centerX + dx, centerY + dy
+end
+
+
 function gForce()
     if !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false) then
         -- if not in vehicle just sit and wait :)
         return
     end
+
     local length = 0.05
     -- because of aspect ratios existing y length has to technically be longer than x
     -- this is for 16:9 which i hope most people are using
     local ylength = length * 1.78
 
-    -- background
-    directx.draw_rect(xCenterG - length, yCenterG - ylength, length * 2, ylength * 2, {r = 0, g = 0, b = 0, a = 0.2})
+    directx.draw_circle(xCenterG, yCenterG, length, {r = 0, g = 0, b = 0, a = 0.2})
 
-    -- contain the ball of force
-    if xOffset > length or xOffset * -1 > length then
-        if xOffset > 0 then
-            xOffset = length
-        elseif xOffset < 0 then
-            xOffset = length * -1
-        end
-    end
-    if yOffset > ylength or yOffset * -1 > ylength then
-        if yOffset > 0 then
-            yOffset = ylength
-        elseif yOffset < 0 then
-            yOffset = ylength * -1
-        end
-    end
+    -- keep ball x and y inside circle that isnt a circle
+    local ballX, ballY = clampToEllipse(xCenterG + xOffset, yCenterG + yOffset, xCenterG, yCenterG, length, ylength)
 
     -- draw the force ball
-    directx.draw_circle(xCenterG + xOffset, yCenterG + yOffset, length / 16, {r = 1, g = 0.96, b = 0.55, a = .8})
+    directx.draw_circle(ballX, ballY, length / 16, {r = 1, g = 0.96, b = 0.55, a = .8})
 
     -- show max
-    directx.draw_text(xCenterG - (length / 1.7), yCenterG + ylength, string.format("Max Lat: %.1fg", maxLateral), 5, .5, {r = 1, g = 0.96, b = 0.55, a = .8}, true)
-    directx.draw_text(xCenterG + (length / 1.7), yCenterG + ylength, string.format("Max Lon: %.1fg", maxLongitude), 5, .5, {r = 1, g = 0.96, b = 0.55, a = .8}, true)
+    if showMaxG then
+        directx.draw_text(xCenterG - (length / 1.7), yCenterG + ylength, string.format("Max Lat: %.1fg", maxLateral), 5, .5, {r = 1, g = 0.96, b = 0.55, a = .8}, true)
+        directx.draw_text(xCenterG + (length / 1.7), yCenterG + ylength, string.format("Max Lon: %.1fg", maxLongitude), 5, .5, {r = 1, g = 0.96, b = 0.55, a = .8}, true)
+    end
 end
 
 util.create_tick_handler(function()
@@ -514,6 +519,10 @@ menu.action(gforcesettings, "Reset Max", {"reset_force_max"}, "", function()
     maxLongitude = 0
 end)
 
+menu.toggle(gforcesettings, "Show Max", {"showmaxgforce"}, "Toggle the max display on/off", function()
+    showMaxG = not showMaxG
+end)
+
 menu.slider(gforcesettings, "G-Force Meter X Location", {"set_gforce_x"}, "", 0, 18, 1, 1, function(val)
   xCenterG = val/18
 end)
@@ -524,48 +533,77 @@ end)
 --------------------------------------------------------------------------------------------------------------------------
 
 
-
 -- Car Angle -------------------------------------------------------------------------------------------------------------
+
+function driftAngle(pretty, reverse)
+    if !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false) then
+        -- if not in vehicle just sit and wait :)
+        return
+    end
+
+    local veh = get_user_car_id()
+
+    -- heading is the same and forwardAngle but +270 ish
+    local heading = ENTITY.GET_ENTITY_HEADING(veh)
+
+    -- change heading value to match velocity value
+    heading += 90
+    if heading > 360 then
+        heading -= 360
+    end
+
+    if reverse then
+        -- change heading if in reverse
+        local gear = entities.get_current_gear(entities.get_user_vehicle_as_pointer())
+        if gear == 0 then
+            heading += 180
+            if heading > 360 then
+                heading -= 360
+            end
+        end
+    end
+
+    -- get angle of momentum
+    local vel = ENTITY.GET_ENTITY_VELOCITY(veh)
+    local velAng = math.deg(math.atan2(vel.Y, vel.X))
+
+    -- change from -180, 180 to 0, 360 to match heading
+    velAng = (velAng + 360) % 360
+
+    -- get car angle (left positive right negative)
+    local angle = heading - velAng
+    if angle > 180 then
+        angle -= 360
+    elseif angle < -180 then
+        angle += 360
+    end
+
+    -- return 0 if not moving
+    if math.abs(vel.X) < 0.05 and math.abs(vel.Y) < 0.05 then
+        angle = 0
+    end
+
+    if pretty then
+        angle = math.floor(angle + 0.5)
+        return angle
+    else
+        return angle
+    end
+end
+
 
 local showAng = menu.list(overlay, "Show Angle")
 local lineMeter = true
 local circleMeter = false
 
 menu.toggle_loop(showAng, "Show Angle" , {"show_angle"}, "Display the cars current angle", function()
-    if !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false) then
-        -- if not in vehicle just sit and wait :)
-        return
-    end
-    dirFacing = ENTITY.GET_ENTITY_FORWARD_VECTOR(get_user_car_id())
-    forwardX = dirFacing.x
-    forwardY = dirFacing.y
-    forwardAngle = math.deg(math.atan2(forwardY, forwardX))
-
-    -- get angle of momentum
-    dirMomentum = ENTITY.GET_ENTITY_VELOCITY(get_user_car_id())
-    momentumX = dirMomentum.x
-    momentumY = dirMomentum.y
-    momentumAngle = math.deg(math.atan2(momentumY, momentumX))
-
-    -- get forward/backward speed
-    vehDir = ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true).y
-
-    -- get car angle
-    carAngle = forwardAngle - momentumAngle
-    if carAngle > 180 then
-        carAngle -= 360
-    elseif carAngle < -180 then
-        carAngle += 360
-    end
-
-    -- Round carAngle to a whole number
-    carAngle = math.floor(carAngle + 0.5)
+    local angle = driftAngle(true, true)
  
     -- draw angle as line
-    if carAngle < 180 and carAngle > -180 and math.abs(vehDir) > 0.2 and lineMeter then
-        xPos = (carAngle / 180) * 0.1
+    if lineMeter then
+        local xPos = (angle / 180) * 0.1
         -- draw angle
-        directx.draw_text(0.5, 1.0, string.format("%d", math.abs(carAngle)) .. '°', 5, 1.4, {r=1, g=1, b=1, a=1}, true)
+        directx.draw_text(0.5, 1.0, string.format("%d", math.abs(angle)) .. '°', 5, 1.4, {r=1, g=1, b=1, a=1}, true)
         -- draw colourful line wow so pretty
         directx.draw_line(0.4, 0.9, 0.4475, 0.9, {r=1, g=1, b=0, a=1})
         directx.draw_line(0.4475, 0.9, 0.453, 0.9, {r=1, g=1, b=0, a=1}, {r=0.13, g=0.55, b=0.13, a=1})
@@ -576,22 +614,21 @@ menu.toggle_loop(showAng, "Show Angle" , {"show_angle"}, "Display the cars curre
         directx.draw_line(0.527, 0.9, 0.546, 0.9, {r=0.13, g=0.55, b=0.13, a=1})
         directx.draw_line(0.546, 0.9, 0.5515, 0.9, {r=0.13, g=0.55, b=0.13, a=1}, {r=1, g=1, b=0, a=1})
         directx.draw_line(0.5515, 0.9, 0.6, 0.9, {r=1, g=1, b=0, a=1})
-
-
         -- draw where we is on the line
         directx.draw_rect(0.4995 + xPos, 0.895, .001, .01, 0, 0, 0, 1)
-        -- draw angle as cirgle
-    elseif carAngle < 180 and carAngle > -180 and math.abs(vehDir) > 0.2 and circleMeter then
+
+    -- draw angle as cirgle
+    elseif circleMeter then
         -- Draw the circle
         local circleX, circleY = 0.5, 0.9
         local radius = 0.0375
         directx.draw_circle(circleX, circleY, radius, {r = 1, g = 1, b = 1, a = 0.1})
 
         -- Draw the angle value
-        directx.draw_text(circleX, circleY + radius + 0.014, string.format("%d", math.abs(carAngle)) .. '°', 5, 1.0, {r=1, g=1, b=1, a=1}, true)
+        directx.draw_text(circleX, circleY + radius + 0.014, string.format("%d", math.abs(angle)) .. '°', 5, 1.0, {r=1, g=1, b=1, a=1}, true)
 
         -- Calculate the position of the line representing the angle
-        local angleRad = math.rad(-carAngle - -90) 
+        local angleRad = math.rad(90 - angle) 
         local lineX = circleX + radius * math.cos(angleRad)
         local lineY = circleY + radius * math.sin(angleRad)
 
@@ -631,7 +668,53 @@ menu.toggle_loop(overlay, "Button Pressure Overlay" , {"Button Pressure Overlay"
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+function saveNeon(veh, lights)
+    local side = false
+    local front = false
+    local back = false
+    for i = 1, 3, 1 do
+        local on = VEHICLE.GET_VEHICLE_NEON_ENABLED(veh, i)   -- check if neon is enabled
+        -- save true/false for enabled/disabled neons
+        if on then
+            VEHICLE.GET_VEHICLE_NEON_COLOUR(veh, lights.r, lights.g, lights.b)
+            if i == 1 then
+                side = true
+            elseif i == 2 then
+                front = true
+            elseif i == 3 then
+                back = true
+            end
+        end
+    end
+    return side, front, back
+end
 
+function resetNeon(veh, lights, side, front, back)
+    -- set back to normal
+    if side then
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(veh, 0, true)
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(veh, 1, true)
+    else
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(veh, 0, false)
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(veh, 1, false)
+    end
+
+    if front then
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(veh, 2, true)
+    else
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(veh, 2, false)
+    end
+
+    if back then
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(veh, 3, true)
+    else
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(veh, 3, false)
+    end
+
+    if side or front or back then
+        VEHICLE.SET_VEHICLE_NEON_COLOUR(veh, memory.read_int(lights.r), memory.read_int(lights.g), memory.read_int(lights.b))
+    end
+end
 
 ----- FD Lights --------------------------------------------------------------------------------------------------------------------------------------------------
 -- save original neon colour
@@ -642,33 +725,6 @@ local frontFd = false
 local backFd = false
 local vehFd
 
-function resetLights()
-    -- set back to normal
-    if sideFd then
-        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 0, true)
-        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 1, true)
-    else
-        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 0, false)
-        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 1, false)
-    end
-
-    if frontFd then
-        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 2, true)
-    else
-        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 2, false)
-    end
-
-    if backFd then
-        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 3, true)
-    else
-        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 3, false)
-    end
-
-    if sideFd or frontFd or backFd then
-        VEHICLE.SET_VEHICLE_NEON_COLOUR(vehFd, memory.read_int(lightsFd.r), memory.read_int(lightsFd.g), memory.read_int(lightsFd.b))
-    end
-end
-
 menu.toggle_loop(vehList, "FD Lights", {"fdlight"}, "Show accel/decel with neon", function()
     if !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false) then
         -- if not in vehicle just sit and wait :)
@@ -677,7 +733,7 @@ menu.toggle_loop(vehList, "FD Lights", {"fdlight"}, "Show accel/decel with neon"
     
     -- if vehicle does not match saved vehicle then reset saved vehicles lights and save new vehicle
     if vehFd != get_user_car_id() and vehFd != nil then
-        resetLights()
+        resetNeon(vehFd, lightsFd, sideFd, frontFd, backFd)
         savedFd = false
     end
 
@@ -685,28 +741,7 @@ menu.toggle_loop(vehList, "FD Lights", {"fdlight"}, "Show accel/decel with neon"
     if !savedFd then
         -- save car
         vehFd = get_user_car_id()
-        for i = 1, 3, 1 do
-            local on = VEHICLE.GET_VEHICLE_NEON_ENABLED(vehFd, i)   -- check if neon is enabled
-            -- save true/false for enabled/disabled neons
-            if on then
-                VEHICLE.GET_VEHICLE_NEON_COLOUR(vehFd, lightsFd.r, lightsFd.g, lightsFd.b)
-                if i == 1 then
-                    sideFd = true
-                elseif i == 2 then
-                    frontFd = true
-                elseif i == 3 then
-                    backFd = true
-                end
-            else
-                if i == 1 then
-                    sideFd = false
-                elseif i == 2 then
-                    frontFd = false
-                elseif i == 3 then
-                    backFd = false
-                end
-            end
-        end
+        sideFd, frontFd, backFd = saveNeon(vehFd, lightsFd)
         savedFd = true
     end
 
@@ -734,9 +769,10 @@ menu.toggle_loop(vehList, "FD Lights", {"fdlight"}, "Show accel/decel with neon"
         VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 3, false)
     end
 end, function()
-    resetLights()
+    resetNeon(vehFd, lightsFd, sideFd, frontFd, backFd)
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 
 --------- flash high beams --------------------------------------------------------------------------------------------------------------------------------------
@@ -982,6 +1018,7 @@ menu.action(plyList, "Self Defense Nuke ", {"Self Defense Nuke"}, "Nuke that mf 
     local player_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(players.user_ped(), 0.0, 0.0, 55.0) -- Spawn nuke 20 meters above the player
   
     local nuke = entities.create_object(hash, player_pos)
+    STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(hash)
     ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(nuke, players.user_ped(), false)
     ENTITY.APPLY_FORCE_TO_ENTITY(nuke, 1, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true) -- Apply downward force to make the nuke fall
   
@@ -1148,6 +1185,7 @@ menu.toggle_loop(lradio, "Become PartyBus", {""}, "Become one with the Party Bus
         local hash = util.joaat("pbus2")
         util.request_model(hash)
         party_bus = entities.create_vehicle(hash, offset, 0)
+        STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(hash)
         entities.request_control(party_bus)
         entities.set_can_migrate(party_bus, false)
         ENTITY.SET_ENTITY_COLLISION(party_bus, false, false)
@@ -1161,6 +1199,7 @@ menu.toggle_loop(lradio, "Become PartyBus", {""}, "Become one with the Party Bus
         local ped_hash = util.joaat("a_c_pigeon")
         util.request_model(ped_hash)
         local driver = entities.create_ped(1, ped_hash, offset, 0)
+        STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(ped_hash)
         PED.SET_PED_INTO_VEHICLE(driver, party_bus, -1)
         VEHICLE.SET_VEHICLE_ENGINE_ON(party_bus, true, true, false)
         VEHICLE.SET_VEHICLE_KEEP_ENGINE_ON_WHEN_ABANDONED(party_bus, true)
@@ -1536,25 +1575,27 @@ function addPlayer(pIdOn)
     local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
     local atpList = menu.list(rList, "Attach To Player")
 
-    menu.text_input(menu.player_root(pIdOn), "Remote Boosties", {"R_Boosties"}, "", function(speed, click)
+    menu.text_input(menu.player_root(pIdOn), "Remote Boosties", {"boost"}, "", function(speed, click)
         if (click & CLICK_FLAG_AUTO) ~= 0 then
             return
         end
     	local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
     	if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
         	local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-            util.toast("Boosting")
             if tonumber(speed) != nil then
+                util.toast("Boosting")
                 for i = 1, 50 do
                     NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
                     VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed)
                 end
                 entities.give_control(vehicle, pIdOn)
+            else
+                return
             end
         else
             util.toast("Player is not in a vehicle or too far away")
         end
-	end) 
+	end)
 
     --Attach to player vehicle--
     menu.divider(atpList, "Attach to player vehicle")
@@ -1650,6 +1691,7 @@ function markerCar(vehHash, veh)
 
     -- create startcar at coords
     startCar = VEHICLE.CREATE_VEHICLE(vehHash, startCoord.X, startCoord.Y, startCoord.Z, startHead, 0, 0, 0)
+    STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(vehHash)
 
     -- disable collision
     ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(veh, startCar, 0)
@@ -1865,6 +1907,7 @@ function spawnCar(lines)
         util.yield_once()
     end
     ghostCar = VEHICLE.CREATE_VEHICLE(veh, lines[115], lines[116], lines[117], lines[120], 0, 1, 0) -- spawns it kinda right but kinda trash location wise
+    STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(veh)
     -- set proper location and rotation
     ENTITY.SET_ENTITY_COORDS_NO_OFFSET(ghostCar, lines[115], lines[116], lines[117], 0, 0, 0)
     ENTITY.SET_ENTITY_ROTATION(ghostCar, lines[118], lines[119], lines[120], 2, 1)
@@ -1946,6 +1989,7 @@ function spawnStig(ghostCar)
         util.yield_once()
     end
     stig = PED.CREATE_PED_INSIDE_VEHICLE(ghostCar, 2, 2363925622, -1, 0, 0)
+    STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(2363925622)
     
     -- set opacity
     ENTITY.SET_ENTITY_ALPHA(stig, ghostAlpha, 0)
@@ -2296,7 +2340,14 @@ util.on_stop(function()
         entities.delete_by_handle(startCar)
     end
 
-    menu.trigger_commands("fdlight off")
+    if savedFd then
+        menu.trigger_commands("fdlight off")
+    end
+
+    if runCir then
+        util.toast("off")
+        menu.trigger_commands("circlergb off")
+    end
 end)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -2375,7 +2426,8 @@ if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
     end
 end
 
-
+-- idk keeps stuff running?
+util.keep_running()
 
 
 -----------------------------------------------------------
