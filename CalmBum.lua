@@ -597,6 +597,11 @@ local lineMeter = true
 local circleMeter = false
 
 menu.toggle_loop(showAng, "Show Angle" , {"show_angle"}, "Display the cars current angle", function()
+    if !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false) then
+        -- if not in vehicle just sit and wait :)
+        return
+    end
+
     local angle = driftAngle(true, true)
  
     -- draw angle as line
