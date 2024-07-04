@@ -1682,6 +1682,7 @@ end
 local ghostName
 local showStart = false
 local startCar
+local raceGhost = false
 
 function markerCar(vehHash, veh)
     -- spawn car from hash
@@ -1766,42 +1767,53 @@ function saveCar(ghostFile, veh, vehHash)
     ghostFile:write(livery .. "\n" .. livery2 .. "\n")
 end
 
-function record(ghostFile, veh)
+function recordGhost(ghostFile, veh)
+    -- prevent camera from tweaking inside of start car
+    if showStart then
+        CAM.SET_GAMEPLAY_CAM_IGNORE_ENTITY_COLLISION_THIS_UPDATE(startCar)
+    end
+    -- record position info
+    local loc = ENTITY.GET_ENTITY_COORDS(veh, true)
+    local rot = ENTITY.GET_ENTITY_ROTATION(veh, 2)
+    ghostFile:write(loc.X .. "\n" .. loc.Y .. "\n" .. loc.Z .. "\n" .. rot.X .. "\n" .. rot.Y .. "\n" .. rot.Z .. "\n")
+    -- record input (for neon and idk maybe other stuff in future)
+    -- brake takes priority
+    if PAD.IS_CONTROL_PRESSED(72, 72) then
+        ghostFile:write("1\n")
+    -- then gas
+    elseif PAD.IS_CONTROL_PRESSED(71, 71) then
+        ghostFile:write("2\n")
+    -- then ebrake
+    elseif PAD.IS_CONTROL_PRESSED(76, 76) then
+        ghostFile:write("3\n")
+    -- otherwise off
+    else
+        ghostFile:write("0\n")
+    end
+
+    -- steering angle (-1 left 1 right)
+    ghostFile:write(PAD.GET_CONTROL_NORMAL(146, 146) .. "\n")
+    util.yield(1)
+end
+
+function startGhost(ghostFile, veh)
     local timerStart = true
     local time
-    -- record until horn or look behind is pressed
-    while not PAD.IS_CONTROL_JUST_PRESSED(79, 79) and not PAD.IS_CONTROL_JUST_PRESSED(86, 86) do
-        -- prevent camera from tweaking inside of start car
-        if showStart then
-            CAM.SET_GAMEPLAY_CAM_IGNORE_ENTITY_COLLISION_THIS_UPDATE(startCar)
+    -- get start time
+    if timerStart then
+        time = util.current_time_millis()
+        timerStart = false
+    end
+    if raceGhost then
+        -- record until race finish
+        while v3.distance(CAM.GET_FINAL_RENDERED_CAM_COORD(), CAM.GET_GAMEPLAY_CAM_COORD()) == 0.0 do
+            recordGhost(ghostFile, veh)
         end
-        -- get start time
-        if timerStart then
-            time = util.current_time_millis()
-            timerStart = false
+    else
+        -- record until horn or look behind is pressed
+        while not PAD.IS_CONTROL_JUST_PRESSED(79, 79) and not PAD.IS_CONTROL_JUST_PRESSED(86, 86) do
+            recordGhost(ghostFile, veh)
         end
-        -- record position info
-        local loc = ENTITY.GET_ENTITY_COORDS(veh, true)
-        local rot = ENTITY.GET_ENTITY_ROTATION(veh, 2)
-        ghostFile:write(loc.X .. "\n" .. loc.Y .. "\n" .. loc.Z .. "\n" .. rot.X .. "\n" .. rot.Y .. "\n" .. rot.Z .. "\n")
-        -- record input (for neon and idk maybe other stuff in future)
-        -- brake takes priority
-        if PAD.IS_CONTROL_PRESSED(72, 72) then
-            ghostFile:write("1\n")
-        -- then gas
-        elseif PAD.IS_CONTROL_PRESSED(71, 71) then
-            ghostFile:write("2\n")
-        -- then ebrake
-        elseif PAD.IS_CONTROL_PRESSED(76, 76) then
-            ghostFile:write("3\n")
-        -- otherwise off
-        else
-            ghostFile:write("0\n")
-        end
-
-        -- steering angle (-1 left 1 right)
-        ghostFile:write(PAD.GET_CONTROL_NORMAL(146, 146) .. "\n")
-        util.yield(1)
     end
     -- get total length of run
     time = (util.current_time_millis() - time) / 1000
@@ -1821,7 +1833,7 @@ menu.text_input(newGhost, "Name", {"ghostname"}, "Enter name for ghost", functio
     ghostName = input
 end)
 
-menu.action(newGhost, "Start", {"start"}, "Start a new run", function()
+menu.action(newGhost, "Start", {"startghost"}, "Start a new run", function()
     local veh = get_user_car_id()
     if ghostRunning then
         util.toast("Already running")
@@ -1849,25 +1861,33 @@ menu.action(newGhost, "Start", {"start"}, "Start a new run", function()
     
         saveCar(ghostFile, veh, vehHash)
 
-        -- wait for press to start recording
-        util.toast("Press horn or look behind to start recording")
-        while not PAD.IS_CONTROL_PRESSED(79, 79) and not PAD.IS_CONTROL_PRESSED(86, 86) do
-            util.yield(10)
-        end
-        util.toast("Press horn or look behind to stop recording")
-        util.yield(100)
+        if raceGhost then
+            while VEHICLE.IS_VEHICLE_STOPPED(veh) do
+                util.yield_once()
+                util.toast("Waiting for start")
+            end
+            startGhost(ghostFile, veh)
+        else
+            -- wait for press to start recording
+            util.toast("Press horn or look behind to start recording")
+            while not PAD.IS_CONTROL_PRESSED(79, 79) and not PAD.IS_CONTROL_PRESSED(86, 86) do
+                util.yield(10)
+            end
+            util.toast("Press horn or look behind to stop recording")
+            util.yield(100)
 
-        -- create start car
-        if showStart then
-            markerCar(vehHash, veh)
-        end
+            -- create start car
+            if showStart then
+                markerCar(vehHash, veh)
+            end
     
-        -- record info to file (A to stop)
-        record(ghostFile, veh)
+            -- record info to file (A to stop)
+            startGhost(ghostFile, veh)
 
-        -- delete start car
-        if showStart then
-            entities.delete_by_handle(startCar)
+            -- delete start car
+            if showStart then
+                entities.delete_by_handle(startCar)
+            end
         end
 
         util.toast("Saved " .. ghostName)
@@ -1887,6 +1907,13 @@ menu.toggle(newGhost, "Show start location", {"showstart"}, "Show where you star
     end
 end)
 
+menu.toggle(newGhost, "Record Race", {"raceghost"}, "Use this option to record a race without needing to time the start and finish\nPress start once you have spawned in your car in the race\nTHIS WILL BREAK IF NOT IN A RACE", function()
+    if ghostRunning then
+        util.toast("Cannot change while running")
+    else
+        raceGhost = not raceGhost
+    end
+end)
 
 ---------------------------------------------------------------------------------------
 
@@ -1903,6 +1930,7 @@ local ghostAlpha = 204
 local ghostCar
 local stig
 local fastForward = 1
+local playing
 
 function spawnCar(lines)
     -- spawn vehicle with first 5 lines
@@ -2095,6 +2123,75 @@ function runGhost(ghostCar, lines, looped)
     end
 end
 
+function playGhost(filename, looped, race)
+    ghostRunning = true
+    playing = filename
+    local ghost = io.open(ghostDir .. filename .. ".txt", r)
+
+    -- create array
+    local lines = {}
+    for line in ghost:lines() do    
+        table.insert(lines, line)
+    end
+        
+    -- spawn car
+    ghostCar = spawnCar(lines)
+    
+    -- go inside car with stig if more than 1 seat
+    if spawnInside then 
+        if spawnStig and VEHICLE.GET_VEHICLE_MODEL_NUMBER_OF_SEATS(lines[1]) > 1 then
+            PED.SET_PED_INTO_VEHICLE(players.user_ped(), ghostCar, 0)
+        elseif !spawnStig then
+            PED.SET_PED_INTO_VEHICLE(players.user_ped(), ghostCar, -1)
+        end
+    end
+    
+    -- spawn stig
+    if spawnStig then
+        stig = spawnStig(ghostCar)
+    end
+        
+    if race then
+        local veh = get_user_car_id()
+        if veh == 0 then
+            util.toast("Must be in vehicle")
+            return
+        end
+        while VEHICLE.IS_VEHICLE_STOPPED(veh) do
+            util.yield_once()
+        end
+        runGhost(ghostCar, lines)
+    else
+        -- countdown
+        for i = 3, 0, -1 do
+            if i > 0 then
+                util.toast(i)
+                util.yield(1000)
+            else
+                util.toast("Go!")
+            end
+        end
+    
+        -- play run
+        if looped then
+            while not PAD.IS_CONTROL_PRESSED(79, 79) and not PAD.IS_CONTROL_PRESSED(86, 86) do
+                runGhost(ghostCar, lines, looped)
+            end
+        else
+            runGhost(ghostCar, lines, looped)
+        end
+    end
+    
+    -- close file and remove entities
+    ghost:close()
+    entities.delete_by_handle(ghostCar)
+    if spawnStig then
+        entities.delete_by_handle(stig)
+    end
+    ghostRunning = false
+    playing = nil
+end
+
 local savedGhosts
 local ghostRefs = {}
 
@@ -2106,79 +2203,29 @@ function listGhosts()
         local filename, ext = string.match(path, '^.+\\(.+)%.(.+)$') -- didnt want to learn string things so stole from wiri, thanks <3
         _ = menu.list(savedGhost, filename)
         table.insert(ghostRefs, _)
-        local looped = false
-        local playing
+
     
         -- play ghost
         menu.action(_, "Play", {"play" .. filename}, "Play the selected run\nHORN OR LOOK BEHIND BUTTON TO END RUN", function()
-            if ghostRunning then
-                util.toast("Already running")
-                return
+            if not ghostRunning then
+                playGhost(filename)
             else
-                ghostRunning = true
-                playing = filename
-                local ghost = io.open(ghostDir .. filename .. ".txt", r)
-                local veh
-        
-                -- create array
-                local lines = {}
-                for line in ghost:lines() do
-                    table.insert(lines, line)
-                end
-        
-                -- spawn car
-                ghostCar = spawnCar(lines)
-    
-                -- go inside car with stig if more than 1 seat
-                if spawnInside then
-                    if spawnStig and VEHICLE.GET_VEHICLE_MODEL_NUMBER_OF_SEATS(lines[1]) > 1 then
-                        PED.SET_PED_INTO_VEHICLE(players.user_ped(), ghostCar, 0)
-                    elseif !spawnStig then
-                        PED.SET_PED_INTO_VEHICLE(players.user_ped(), ghostCar, -1)
-                    end
-                end
-    
-                -- spawn stig
-                if spawnStig then
-                    stig = spawnStig(ghostCar)
-                end
-        
-                -- countdown
-                for i = 3, 0, -1 do
-                    if i > 0 then
-                        util.toast(i)
-                        util.yield(1000)
-                    else
-                        util.toast("Go!")
-                    end
-                end
-    
-                -- play run
-                if looped then
-                    while not PAD.IS_CONTROL_PRESSED(79, 79) and not PAD.IS_CONTROL_PRESSED(86, 86) do
-                        runGhost(ghostCar, lines, looped)
-                    end
-                    looped = false
-                else
-                    runGhost(ghostCar, lines, looped)
-                end
-    
-                -- close file and remove entities
-                ghost:close()
-                entities.delete_by_handle(ghostCar)
-                if spawnStig then
-                    entities.delete_by_handle(stig)
-                end
-                ghostRunning = false
-                playing = nil
+                util.toast("Already running")
             end
         end)
     
         -- play looped ghost
         menu.action(_, "Play Looped", {"playloop" .. filename}, "Play the selected run looped\nHORN OR LOOK BEHIND BUTTON TO END RUN", function()
             if not ghostRunning then
-                looped = true
-                menu.trigger_commands("play" .. filename:gsub("%s+", ""))
+                playGhost(filename, true)
+            else
+                util.toast("Already running")
+            end
+        end)
+
+        menu.action(_, "Play Race", {"playrace" .. filename}, "Play the selected run in a race\nHORN OR LOOK BEHIND BUTTON TO END RUN", function()
+            if not ghostRunning then
+                playGhost(filename, false, true)
             else
                 util.toast("Already running")
             end
@@ -2246,7 +2293,7 @@ end
 
 -- Settings
 
-menu.toggle(ghostSettings, "Spawn Stig", {"spawnstig"}, "Spawn lightning fast driver in ghost car", function()
+menu.toggle(ghostSettings, "Spawn Stig", {"spawnstig"}, "Spawn lightning fast driver in ghost car", function(on, click)
     if ghostRunning then
         util.toast("Cannot change while running")
         if click != CLICK_SCRIPTED and on then
@@ -2347,11 +2394,6 @@ util.on_stop(function()
 
     if savedFd then
         menu.trigger_commands("fdlight off")
-    end
-
-    if runCir then
-        util.toast("off")
-        menu.trigger_commands("circlergb off")
     end
 end)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
