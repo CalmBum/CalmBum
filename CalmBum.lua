@@ -2223,7 +2223,7 @@ function listGhosts()
             end
         end)
 
-        menu.action(_, "Play Race", {"playrace" .. filename}, "Play the selected run in a race\nHORN OR LOOK BEHIND BUTTON TO END RUN", function()
+        menu.action(_, "Play in race", {"playrace" .. filename}, "Play the selected run in a race\nHORN OR LOOK BEHIND BUTTON TO END RUN", function()
             if not ghostRunning then
                 playGhost(filename, false, true)
             else
