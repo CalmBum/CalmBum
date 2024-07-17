@@ -14,7 +14,7 @@ util.require_natives("1672190175")
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.4.5"
+local SCRIPT_VERSION = "6.5"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
