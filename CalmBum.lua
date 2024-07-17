@@ -14,7 +14,7 @@ util.require_natives("1672190175")
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.4.3"
+local SCRIPT_VERSION = "6.4.4"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -239,7 +239,498 @@ util.create_tick_handler(function()
         end
     end
 end)
------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+--Boosties v2 / Wheel Bias / Accel all tied together here-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+----- this entire car copying section is stolen from acjoker, thank you for making my life so easy <3 ------------------------------
+
+local Vehopts = { 
+    {1 , ("Spoilers")},
+    {2 , ("Front Bumper / Countermeasures")},
+    {3 , ("Rear Bumper")},
+    {4 , ("Side Skirt")},
+    {5 , ("Exhaust")},
+    {6 , ("Frame")},
+    {7 , ("Grille")},
+    {8 , ("Hood")},
+    {9 , ("Fender")},
+    {10 , ("Right Fender")},
+    {11 , ("Roof / Weapons")},
+    {12 , ("Engine")},
+    {13 , ("Brakes")},
+    {14 , ("Transmission")},
+    {15 , ("Horns")},
+    {16 , ("Suspension")},
+    {17 , ("Armour")},
+    {24 , ("Front Wheels")},
+    {25 , ("Motorcycle Back Wheel Design")},
+    {49 , ("Livery")},
+}
+local Bennysopts = {
+    {26 , ("Plate Holders")},
+    {27 , ("Vanity Plates")},
+    {28 , ("Trim Design")},
+    {29 , ("Ornaments")},
+    {30 , ("Dashboard")},
+    {31 , ("Dial Design")},
+    {32 , ("Door Speaker")},
+    {33 , ("Seats")},
+    {34 , ("Steering Wheel")},
+    {35 , ("Shifter Leavers")},
+    {36 , ("Plaques")},
+    {37 , ("Speakers")},
+    {38 , ("Trunk")},
+    {39 , ("Hydraulics")},
+    {40 , ("Engine Block")},
+    {41 , ("Boost / Air Filter")},
+    {42 , ("Struts")},
+    {43 , ("Arch Cover")},
+    {44 , ("Aerials")},
+    {45 , ("Trim")},
+    {46 , ("Tank")},
+    {47 , ("Windows")},
+    {48 , ("Unknown")},
+}
+local Vehtogs = {
+    {19 , ("Turbo")},
+    {21 , ("Tire Smoke")},
+    {23 , ("Xenon Headlights")},
+}
+
+local vehDir <const> = filesystem.scripts_dir() .. "CalmBum/vehicle\\"
+if not filesystem.exists(vehDir) then
+	filesystem.mkdir(vehDir)
+end
+
+local CloneVeh_Setting = vehDir .. "CloneVeh.json"
+local CloneVehtog_Setting = vehDir .. "CloneVehtog.json"
+local CloneVehextra_Setting = vehDir .. "CloneVehextra.json"
+
+function func.Save_settings(files, settings)
+    local file = io.open(files, "wb")
+    if file == nil then util.toast(Str_trans("Error opening file for writing: ")..files, TOAST_ALL) return end
+    file:write(soup.json.encode(settings))
+    file:close()
+end
+
+function func.Load_settings(files)
+    local file = io.open(files)
+    if file then
+        local version = file:read()
+        file:close()
+        local status, list = pcall(soup.json.decode, version)
+        if not status then
+            error("Could not decode list file")
+        end
+        return list
+    else
+        return {}
+    end
+end
+
+local function Add_mod(number, index)
+    local new_mod = {index=index, number=number}
+    local list = func.Load_settings(CloneVeh_Setting)
+    for list as mod do
+        if mod.index == new_mod.index then
+            return true
+        end
+    end
+    table.insert(list, new_mod)
+    func.Save_settings(CloneVeh_Setting, list)
+    return true
+end
+
+local function Add_tog(tog, index)
+    local new_mod = {index=index, tog=tog}
+    local list = func.Load_settings(CloneVehtog_Setting)
+    for list as mod do
+        if mod.index == new_mod.index then
+            return true
+        end
+    end
+    table.insert(list, new_mod)
+    func.Save_settings(CloneVehtog_Setting, list)
+    return true
+end
+
+local function Add_extra(tog, id)
+    local new_mod = {id=id, tog=tog}
+    local list = func.Load_settings(CloneVehextra_Setting)
+    for list as mod do
+        if mod.id == new_mod.id then
+            return true
+        end
+    end
+    table.insert(list, new_mod)
+    func.Save_settings(CloneVehextra_Setting, list)
+    return true
+end
+
+function func.Dlc(veh)
+    for i = 0, FILES.GET_NUM_DLC_VEHICLES() - 1 do--credits to SoulReaper
+        if FILES.GET_DLC_VEHICLE_MODEL(i) == veh then
+            return true
+        end
+    end
+    return false
+end
+
+local clone = {}
+local clone_attributes = {paint = { prim = {}, secon = {}, int ={}, dash = {}, extra = {}, extra5 ={}, extra6 ={},
+modcolor1 = {}, modcolor2 = {} }, tire = {}, neon = {}}
+local neonindexes = {}
+local function GetCloneVeh(veh)
+    clone.wheel_type = VEHICLE.GET_VEHICLE_WHEEL_TYPE(veh)
+    clone.tint_type = VEHICLE.GET_VEHICLE_WINDOW_TINT(veh)
+    clone.vhash = ENTITY.GET_ENTITY_MODEL(veh)
+    clone.tar1 = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+    clone.vh = ENTITY.GET_ENTITY_HEADING(veh)
+    clone.plate = VEHICLE.GET_VEHICLE_NUMBER_PLATE_TEXT(veh)
+    clone.plate_type = VEHICLE.GET_VEHICLE_NUMBER_PLATE_TEXT_INDEX(veh)
+    clone.vel = ENTITY.GET_ENTITY_VELOCITY(veh)
+    clone.rpm = entities.get_rpm(entities.handle_to_pointer(veh))
+    clone.gear = entities.get_current_gear(entities.handle_to_pointer(veh))
+    clone.speed = ENTITY.GET_ENTITY_SPEED(veh)
+    clone.livery2 = VEHICLE.GET_VEHICLE_LIVERY2(veh)
+    clone.enveff = VEHICLE.GET_VEHICLE_ENVEFF_SCALE(veh)
+    clone.xenonindex = VEHICLE.GET_VEHICLE_XENON_LIGHT_COLOR_INDEX(veh)
+    for Vehopts as v do
+        local current = VEHICLE.GET_VEHICLE_MOD(veh, v[1] -1)
+        local maxmods = VEHICLE.GET_NUM_VEHICLE_MODS(veh, v[1] - 1)
+        if maxmods > 0 then
+            local modnames = v[2]
+            Add_mod(current, v[1] -1)
+        end
+    end
+    for Vehtogs as t do
+        local current = VEHICLE.IS_TOGGLE_MOD_ON(veh, t[1] -1) 
+        Add_tog(current, t[1] -1)  
+    end
+    if func.Dlc(ENTITY.GET_ENTITY_MODEL(veh)) then
+        for Bennysopts as v do
+            local current = VEHICLE.GET_VEHICLE_MOD(veh, v[1] -1)
+            local maxmods = VEHICLE.GET_NUM_VEHICLE_MODS(veh, v[1] - 1)
+            if maxmods > 0 then
+                local modnames = v[2]
+                Add_mod(current, v[1] -1)
+            end
+        end
+    end
+    for i = 1, 14 do
+        if VEHICLE.IS_VEHICLE_EXTRA_TURNED_ON(veh, i) then
+            Add_extra(false, i)
+        end
+    end
+    for i = 0, 3 do
+        if VEHICLE.GET_VEHICLE_NEON_ENABLED(veh, i) then
+            table.insert(neonindexes, i)
+        end
+    end
+    clomem = {red = memory.alloc(8), green = memory.alloc(8), blue = memory.alloc(8)}
+    if VEHICLE.GET_IS_VEHICLE_PRIMARY_COLOUR_CUSTOM(veh) then
+        VEHICLE.GET_VEHICLE_CUSTOM_PRIMARY_COLOUR(veh, clomem.red, clomem.green, clomem.blue)
+        clone_attributes.paint.prim = {r = memory.read_int(clomem.red), g = memory.read_int(clomem.green), b = memory.read_int(clomem.blue)}
+    else
+        VEHICLE.GET_VEHICLE_COLOURS(veh, clomem.green, clomem.blue)
+        clone_attributes.paint.prim = {r = -1, g = memory.read_int(clomem.green), b = memory.read_int(clomem.blue)}
+    end
+    if VEHICLE.GET_IS_VEHICLE_SECONDARY_COLOUR_CUSTOM(veh) then
+        VEHICLE.GET_VEHICLE_CUSTOM_SECONDARY_COLOUR(veh, clomem.red, clomem.green, clomem.blue)
+        clone_attributes.paint.secon = {r = memory.read_int(clomem.red), g = memory.read_int(clomem.green), b = memory.read_int(clomem.blue)}
+    else
+        VEHICLE.GET_VEHICLE_COLOURS(veh, clomem.green, clomem.blue)
+        clone_attributes.paint.secon = {r = -1, g = memory.read_int(clomem.green), b = memory.read_int(clomem.blue)}
+    end
+    VEHICLE.GET_VEHICLE_TYRE_SMOKE_COLOR(veh, clomem.red, clomem.green, clomem.blue)
+    clone_attributes.tire = {r = memory.read_int(clomem.red), g = memory.read_int(clomem.green), b = memory.read_int(clomem.blue)}
+    VEHICLE.GET_VEHICLE_NEON_COLOUR(veh, clomem.red, clomem.green, clomem.blue)
+    clone_attributes.neon = {r = memory.read_int(clomem.red), g = memory.read_int(clomem.green), b = memory.read_int(clomem.blue)}
+    VEHICLE.GET_VEHICLE_EXTRA_COLOURS(veh, clomem.red, clomem.green)
+    clone_attributes.paint.extra = {r = memory.read_int(clomem.red), g = memory.read_int(clomem.green)}
+    VEHICLE.GET_VEHICLE_EXTRA_COLOUR_5(veh, clomem.red)
+    clone_attributes.paint.extra5 = {r = memory.read_int(clomem.red)}
+    VEHICLE.GET_VEHICLE_EXTRA_COLOUR_6(veh, clomem.red)
+    clone_attributes.paint.extra6 = {r = memory.read_int(clomem.red)}
+    VEHICLE.GET_VEHICLE_MOD_COLOR_1(veh, clomem.red, clomem.green, clomem.blue)
+    clone_attributes.paint.modcolor1 = {r = memory.read_int(clomem.red), g = memory.read_int(clomem.green), b = memory.read_int(clomem.blue)}
+    VEHICLE.GET_VEHICLE_MOD_COLOR_2(veh, clomem.red, clomem.green)
+    clone_attributes.paint.modcolor2 = {r = memory.read_int(clomem.red), g = memory.read_int(clomem.green)}
+    clone.wheelvar1 = VEHICLE.GET_VEHICLE_MOD_VARIATION(veh, 23)
+    if VEHICLE.IS_THIS_MODEL_A_BIKE(clone.vhash) then
+        clone.wheelvar2 = VEHICLE.GET_VEHICLE_MOD_VARIATION(veh, 24)
+    end
+    return clone, clomem, clone_attributes, clone.wheelvar1, neonindexes
+end
+
+local function SetCloneVeh(clone, clomem)
+    local cloneveh = entities.create_vehicle(clone.vhash, clone.tar1, clone.vh)
+    PED.SET_PED_INTO_VEHICLE(players.user_ped(), cloneveh, -1)
+    local custom = {wheel = false}
+    if clone.wheelvar1 or clone.wheelvar2 then
+        custom.wheel = true
+    end
+    local Togtable = func.Load_settings(CloneVehtog_Setting)
+    for Togtable as t do
+        VEHICLE.TOGGLE_VEHICLE_MOD(cloneveh, t.index, t.tog)
+    end
+    local Modtable = func.Load_settings(CloneVeh_Setting)
+    for Modtable as v do
+        VEHICLE.SET_VEHICLE_WHEEL_TYPE(cloneveh, clone.wheel_type)
+        VEHICLE.SET_VEHICLE_MOD(cloneveh, v.index, v.number, custom.wheel)
+    end
+    local Extratable = func.Load_settings(CloneVehextra_Setting)
+    for Extratable as v do
+        VEHICLE.SET_VEHICLE_EXTRA(cloneveh, v.id, v.tog)
+    end
+    for neonindexes as n do
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(cloneveh, n, true)
+    end
+    if clone_attributes.paint.prim.r ~= -1 then
+        VEHICLE.SET_VEHICLE_CUSTOM_PRIMARY_COLOUR(cloneveh, clone_attributes.paint.prim.r, clone_attributes.paint.prim.g, clone_attributes.paint.prim.b)
+    else
+        VEHICLE.SET_VEHICLE_COLOURS(cloneveh, clone_attributes.paint.prim.g, clone_attributes.paint.prim.b)
+    end
+    if clone_attributes.paint.secon.r ~= -1 then
+        VEHICLE.SET_VEHICLE_CUSTOM_SECONDARY_COLOUR(cloneveh, clone_attributes.paint.secon.r, clone_attributes.paint.secon.g, clone_attributes.paint.secon.b)
+    else
+        VEHICLE.SET_VEHICLE_COLOURS(cloneveh, clone_attributes.paint.secon.g, clone_attributes.paint.secon.b)
+    end
+    VEHICLE.SET_VEHICLE_NEON_COLOUR(cloneveh, clone_attributes.neon.r, clone_attributes.neon.g, clone_attributes.neon.b)
+    VEHICLE.SET_VEHICLE_EXTRA_COLOURS(cloneveh, clone_attributes.paint.extra.r, clone_attributes.paint.extra.g)
+    VEHICLE.SET_VEHICLE_EXTRA_COLOUR_5(cloneveh, clone_attributes.paint.extra5.r)
+    VEHICLE.SET_VEHICLE_EXTRA_COLOUR_6(cloneveh, clone_attributes.paint.extra6.r)
+    VEHICLE.SET_VEHICLE_MOD_COLOR_1(cloneveh, clone_attributes.paint.modcolor1.r, clone_attributes.paint.modcolor1.g, clone_attributes.paint.modcolor1.b)
+    VEHICLE.SET_VEHICLE_MOD_COLOR_2(cloneveh, clone_attributes.paint.modcolor2.r, clone_attributes.paint.modcolor2.g)
+    VEHICLE.SET_VEHICLE_ENVEFF_SCALE(clone, clone.enveff)
+    VEHICLE.SET_VEHICLE_WINDOW_TINT(cloneveh, clone.tint_type)
+    VEHICLE.SET_VEHICLE_NUMBER_PLATE_TEXT_INDEX(cloneveh, clone.plate_type)
+    VEHICLE.SET_VEHICLE_NUMBER_PLATE_TEXT(cloneveh, clone.plate)
+    VEHICLE.SET_VEHICLE_XENON_LIGHT_COLOR_INDEX(cloneveh, clone.xenonindex)
+    VEHICLE.SET_VEHICLE_TYRE_SMOKE_COLOR(cloneveh, clone_attributes.tire.r, clone_attributes.tire.g, clone_attributes.tire.b)
+    VEHICLE.SET_VEHICLE_ENGINE_ON(cloneveh, true, true, false)
+    VEHICLE.SET_VEHICLE_LIVERY2(cloneveh, clone.livery2)
+    entities.set_rpm(entities.handle_to_pointer(cloneveh), clone.rpm)
+    entities.set_current_gear(entities.handle_to_pointer(cloneveh), clone.gear)
+    ENTITY.SET_ENTITY_VELOCITY(cloneveh, clone.vel.x, clone.vel.y, clone.vel.z)
+    VEHICLE.SET_VEHICLE_FORWARD_SPEED(cloneveh, clone.speed)
+    neonindexes = {}
+    return cloneveh
+end
+
+function SetFlags()
+    local curcar = entities.get_user_vehicle_as_handle()
+    local pers
+    local persVeh
+    local accel = nil
+    local boost = 0
+    if modAccelVal ~= nil then
+        accel = modAccelVal
+    end
+    if boosties ~= 0 then
+        boost = boosties
+    end
+    if curcar == entities.get_user_personal_vehicle_as_handle() then
+        pers = true
+        persVeh = entities.get_user_personal_vehicle_as_handle()
+    end
+    GetCloneVeh(curcar)
+    entities.delete_by_handle(curcar)
+    if pers then
+        while entities.get_user_personal_vehicle_as_handle() == -1 do
+            util.yield_once()
+        end
+        menu.trigger_commands("returnpv")
+    end
+    local veh = SetCloneVeh(clone, clomem)
+    if boost ~= 0 then
+        if accel == nil then
+            VEHICLE.MODIFY_VEHICLE_TOP_SPEED(get_user_car_id(), boost)
+        else
+            util.yield(100)
+            acceleration(accel, boost)
+        end
+    else
+        util.yield(100)
+        acceleration(accel, boost)
+    end
+    io.remove(CloneVeh_Setting)
+    io.remove(CloneVehtog_Setting)
+    io.remove(CloneVehextra_Setting)
+end
+------------------ everybody say "I LOVE YOU JOKER" ------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+------ majority of this is stolen from Wiri, everyone give Wiri a big hug -----------------------------------------------------------------------
+function memory_scan(name, pattern, callback)
+	local address = memory.scan(pattern)
+	callback(address)
+end
+
+local p_getModelInfo = 0
+memory_scan("GVMI", "48 89 5C 24 ? 57 48 83 EC 20 8B 8A ? ? ? ? 48 8B DA", function (address)
+	p_getModelInfo = memory.rip(address + 0x2A)
+end)
+
+local GetHandlingDataFromIndex = 0
+memory_scan("GHDFI", "40 53 48 83 EC 30 48 8D 54 24 ? 0F 29 74 24 ?", function (address)
+	GetHandlingDataFromIndex = memory.rip(address + 0x37)
+end)
+
+function getHandlingAddress()
+    local name = players.get_vehicle_model(players.user())
+    local info = util.call_foreign_function(p_getModelInfo, name, 0)
+    local handlingAddress = util.call_foreign_function(GetHandlingDataFromIndex, memory.read_uint(info + 0x4B8))
+    return handlingAddress
+end
+
+local driveBias = -1
+local awdBias = false
+local callSet = false
+
+local driveBiasSlider = menu.slider_float(speedMods, "Drive Bias", {"drivebias"}, "0 = RWD\n1 = FWD", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+        return
+    end
+
+    local val = num / 100
+
+    if val == 1.0 or val == 0.0 then
+        callSet = true
+        awdBias = false
+    elseif val ~= 1.0 and val ~= 0.0 and !awdBias then
+        callSet = true
+        awdBias = true
+    end
+    
+    -- get handling address
+    local adr = getHandlingAddress()
+
+    if awdBias == false then
+        memory.write_float(adr + 0x48, val)
+        memory.write_float(adr + 0x4C, (1 - val))
+    else
+        memory.write_float(adr + 0x48, val * 2)
+        memory.write_float(adr + 0x4C, (1 - val) * 2)
+    end
+
+    if callSet then
+        SetFlags()
+        callSet = false
+    end
+end)
+
+
+util.create_tick_handler(function()
+    if !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false) then
+        if boosties != 0 then
+            boosties = 0
+        end
+        if modAccelVal != nil then
+            modAccelVal = nil
+        end
+        if driveBias != -1 then
+            driveBias = -1
+        end
+        if accelVal != 0 then
+            accelVal = 0
+        end
+    else
+        if accelVal == 0 then
+            accelVal = math.floor((tonumber(string.format("%.3f", VEHICLE.GET_VEHICLE_ACCELERATION(get_user_car_id()))) * 100) + 0.5)
+        end
+        util.yield(500)
+        if driveBias == -1 then
+            local adr = getHandlingAddress()
+            local fwdBias = memory.read_float(adr + 0x48)
+            local rwdBias = memory.read_float(adr + 0x4C)
+            if fwdBias == 0.0 then
+                driveBias = 0.0
+                awdBias = false
+            else
+                driveBias = tonumber(string.format("%.2f", fwdBias / 2))
+                if rwdBias ~= 0 then
+                    awdBias = true
+                end
+            end
+            menu.set_value(driveBiasSlider, math.floor(driveBias * 100))
+        end
+    end
+end)
+
+
+
+
+local boosties = 0
+local modAccelVal = nil
+local accelVal = 0
+
+menu.text_input(speedMods, "Boosties v2", {"boosties"}, "This version must be used together with Acceleration.", function(speed, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+        return
+    end
+    boosties = speed
+    if modAccelVal == nil then
+        local veh = get_user_car_id()
+        VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, speed)
+        util.toast("Boosted")
+    else
+        acceleration(modAccelVal, boosties)
+        util.toast("Boosted")
+    end
+end)
+
+function acceleration(val, boost)
+    local stock = menu.get_value(menu.ref_by_path("Vehicle>Movement>Handling Editor>Base>InitialDriveForce")) / 10000
+    local veh = get_user_car_id()
+
+    menu.trigger_commands("vhinitialdriveforce " .. 10)
+    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
+
+    local mult = VEHICLE.GET_VEHICLE_ACCELERATION(veh) / 10
+    local num = val / mult
+
+    menu.trigger_commands("vhinitialdriveforce " .. num)
+    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
+
+    menu.trigger_commands("vhinitialdriveforce " .. stock)
+end
+
+local accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, "Modifies the vehicles acceleration", -100000, 100000, accelVal, 1, function(val, prev_val, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+        return
+    end
+    if boosties == 0 then
+        acceleration(val/100, 0)
+    else
+        acceleration(val/100, boosties)
+    end
+    modAccelVal = val/100
+end)
+
+menu.on_blur(speedMods, function()
+    menu.delete(accelOpt)
+    accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, "Modifies the vehicles acceleration", -100000, 100000, accelVal, 1, function(val, prev_val, click)
+        if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+            return
+        end
+        if boosties == 0 then
+            acceleration(val/100, 0)
+        else
+            acceleration(val/100, boosties)
+        end
+        modAccelVal = val/100
+    end)
+end)
+
+function onFoot()
+    return !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false)
+end
+
 
 
 
