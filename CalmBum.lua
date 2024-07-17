@@ -5,7 +5,7 @@
 --██║░░██╗██╔══██║██║░░░░░██║╚██╔╝██║██╔══██╗██║░░░██║██║╚██╔╝██║
 --╚█████╔╝██║░░██║███████╗██║░╚═╝░██║██████╦╝╚██████╔╝██║░╚═╝░██║
 --░╚════╝░╚═╝░░╚═╝╚══════╝╚═╝░░░░░╚═╝╚═════╝░░╚═════╝░╚═╝░░░░░╚═╝
---Brought to you by SuccMyBum & Calpernia_
+--Brought to you by SuccMyBum & _-Cal-_
 
 --Thank you to Lance, Wiri, Jinx, Nova, Jacks, Jerry, Dolos, and especially Hexarobi for some of this code--
 
@@ -14,7 +14,7 @@ util.require_natives("1672190175")
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.4.4"
+local SCRIPT_VERSION = "6.4.5"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -2851,7 +2851,7 @@ local driveBias = -1
 local awdBias = false
 local callSet = false
 
-local driveBiasSlider = menu.slider_float(speedMods, "Drive Bias", {"drivebias"}, "0 = RWD\n1 = FWD. It will respawn your car if you go from RWD or FWD to AWD, or any combo of the 3. Does not work with constructs unless car is already AWD", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
+local driveBiasSlider = menu.slider_float(speedMods, "Drive Bias", {"drivebias"}, "0 = RWD\n1 = FWD.\n1 It will respawn your car if you go from RWD or FWD to AWD, or any combo of the 3. Does not work with constructs unless car is already AWD", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
     if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
         return
     end
