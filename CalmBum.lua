@@ -2851,7 +2851,7 @@ local driveBias = -1
 local awdBias = false
 local callSet = false
 
-local driveBiasSlider = menu.slider_float(speedMods, "Drive Bias", {"drivebias"}, "0 = RWD\n1 = FWD.\n1 It will respawn your car if you go from RWD or FWD to AWD, or any combo of the 3. Does not work with constructs unless car is already AWD", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
+local driveBiasSlider = menu.slider_float(speedMods, "Drive Bias", {"drivebias"}, "0 = RWD\n1 = FWD.\n It will respawn your car if you go from RWD or FWD to AWD, or any combo of the 3. Does not work with constructs unless car is already AWD", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
     if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
         return
     end
