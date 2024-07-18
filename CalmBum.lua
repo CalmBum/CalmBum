@@ -184,7 +184,7 @@ local speedMods = menu.list(vehList, "Speed Mods")
 
 local boosties = 0
 local modAccelVal = nil
-menu.text_input(speedMods, "Boosties", {"boosties"}, "This version must be used together with Acceleration.", function(speed, click)
+menu.text_input(speedMods, "Boosties", {"boosties"}, "Modifies the vehicles top speed + power", function(speed, click)
     if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
         return
     end
@@ -2402,24 +2402,6 @@ end, false)
 
 ---------------------------------------------------------------------------------------
 
--- cleanup on stop
-util.on_stop(function()
-	if ENTITY.DOES_ENTITY_EXIST(ghostCar) then
-        entities.delete_by_handle(ghostCar)
-    end
-
-    if ENTITY.DOES_ENTITY_EXIST(stig) then
-        entities.delete_by_handle(stig)
-    end
-
-    if ENTITY.DOES_ENTITY_EXIST(startCar) then
-        entities.delete_by_handle(startCar)
-    end
-
-    if savedFd then
-        menu.trigger_commands("fdlight off")
-    end
-end)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -2926,6 +2908,25 @@ util.create_tick_handler(function()
 end)
 
 ------------------------------------------------------------------------------------------------------------------------------------------
+
+-- cleanup on stop
+util.on_stop(function()
+	if ENTITY.DOES_ENTITY_EXIST(ghostCar) then
+        entities.delete_by_handle(ghostCar)
+    end
+
+    if ENTITY.DOES_ENTITY_EXIST(stig) then
+        entities.delete_by_handle(stig)
+    end
+
+    if ENTITY.DOES_ENTITY_EXIST(startCar) then
+        entities.delete_by_handle(startCar)
+    end
+
+    if savedFd then
+        menu.trigger_commands("fdlight off")
+    end
+end)
 
 
 --Boot up---------
