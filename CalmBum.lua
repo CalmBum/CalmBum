@@ -14,7 +14,7 @@ util.require_natives("1672190175")
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.5"
+local SCRIPT_VERSION = "6.5.1"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -101,6 +101,51 @@ local onList = menu.list(menu.my_root(), "Online")
 --------------------------------
 
 
+-- Tuning -------------------------------------------------------------------------------------------------------------------------------------------------------------
+local tuningMenu = menu.list(vehList, "Tuning")
+
+--Boosties------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+local boosties = 0
+local modAccelVal = nil
+menu.text_input(tuningMenu, "Boosties", {"boosties"}, "Modifies the vehicles top speed + power", function(speed, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+        return
+    end
+    boosties = speed
+    if modAccelVal == nil then
+        local veh = get_user_car_id()
+        VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, speed)
+        util.toast("Boosted")
+    else
+        acceleration(modAccelVal, boosties)
+        util.toast("Boosted")
+    end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+--Torque---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+local torqueMult = 0
+
+menu.text_input(tuningMenu, "Torque", {"torque"}, "Set torque multiplier value", function(val)
+    if (click & CLICK_FLAG_AUTO) ~= 0 then
+        return
+    end
+    torqueMult = tonumber(val)
+end, 0)
+
+util.create_tick_handler(function()
+    if torqueMult ~= 0 then
+        if !onFoot() then
+            VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(get_user_car_id(), torqueMult)
+        end
+    end
+end)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 --Drift Smoke------------------------------------------------------------------------------------------------------------------------------------------------
 
 local driftsm = menu.list(vehList, "Drift Smoke")
@@ -174,79 +219,6 @@ menu.text_input(driftsm, "Front Smoke Size", {"front_smoke_size"}, "Set front sm
   front_smoke_size = val
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
--- SPEED -------------------------------------------------------------------------------------------------------------------------------------------------------------
-local speedMods = menu.list(vehList, "Speed Mods")
-
---Boosties------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-local boosties = 0
-local modAccelVal = nil
-menu.text_input(speedMods, "Boosties", {"boosties"}, "Modifies the vehicles top speed + power", function(speed, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
-        return
-    end
-    boosties = speed
-    if modAccelVal == nil then
-        local veh = get_user_car_id()
-        VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, speed)
-        util.toast("Boosted")
-    else
-        acceleration(modAccelVal, boosties)
-        util.toast("Boosted")
-    end
-end)
------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
---Torque---------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-local torqueMult = 2
-
-menu.toggle_loop(speedMods, "Torque Multiplier", {"Torque_Multiplier"}, "This is a multiplier so don't go crazy", function()
-    local player = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    if PED.IS_PED_IN_ANY_VEHICLE(player, false) then
-        local vehicle = PED.GET_VEHICLE_PED_IS_IN(player, false)
-        VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(vehicle, torqueMult)
-    end
-end)
-
-menu.text_input(speedMods, "Set Torque", {"Set_Torque"}, "Set multiplier value", function(val)
-    torqueMult = val
-end, 2)
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
---Clutch Kick-----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-local clutchKick = false
-local clutchCounter = 0
-
-menu.toggle_loop(speedMods, "Auto Clutch Kick", {}, "Clutch kick no more! Every time you hit the gas this will clutch kick for you", function()
-    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_JUST_PRESSED(71, 71) and (math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).x) > 10 or math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).y) > 10) then
-        clutchKick = true
-    end
-end)
-
-util.create_tick_handler(function()
-    if clutchKick then
-        if clutchCounter >= 0 and clutchCounter < 3 then
-            PAD.SET_CONTROL_VALUE_NEXT_FRAME(76, 76, 1)
-            clutchCounter += 1
-        elseif clutchCounter == 3 then
-            clutchCounter = 0
-            PAD.SET_CONTROL_VALUE_NEXT_FRAME(71, 71, 1)
-            clutchKick = false
-        end
-    end
-end)
-
-
-
 
 
 --NOS purge------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -743,7 +715,30 @@ menu.toggle_loop(vehList, "Drift Cam Assist", {}, "Prevents the camera from goin
 end)
 
 
+--Clutch Kick-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+local clutchKick = false
+local clutchCounter = 0
+
+menu.toggle_loop(vehList, "Auto Clutch Kick", {}, "Clutch kick no more! Every time you hit the gas this will clutch kick for you", function()
+    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_JUST_PRESSED(71, 71) and (math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).x) > 10 or math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).y) > 10) then
+        clutchKick = true
+    end
+end)
+
+util.create_tick_handler(function()
+    if clutchKick then
+        if clutchCounter >= 0 and clutchCounter < 3 then
+            PAD.SET_CONTROL_VALUE_NEXT_FRAME(76, 76, 1)
+            clutchCounter += 1
+        elseif clutchCounter == 3 then
+            clutchCounter = 0
+            PAD.SET_CONTROL_VALUE_NEXT_FRAME(71, 71, 1)
+            clutchKick = false
+        end
+    end
+end)
 
 ----- FD Lights --------------------------------------------------------------------------------------------------------------------------------------------------
 -- save original neon colour
@@ -2440,10 +2435,18 @@ menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Ser
 
 --------------------------------- Acceleration -----------------------------------------------------
 local accelVal = 0
+local stockAccel = false
 
 function acceleration(val, boost)
     local stock = menu.get_value(menu.ref_by_path("Vehicle>Movement>Handling Editor>Base>InitialDriveForce")) / 10000
     local veh = get_user_car_id()
+
+    if stockAccel then
+        menu.trigger_commands("vhinitialdriveforce " .. stock)
+        VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
+        stockAccel = false
+        return
+    end
 
     menu.trigger_commands("vhinitialdriveforce " .. 10)
     VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
@@ -2457,9 +2460,12 @@ function acceleration(val, boost)
     menu.trigger_commands("vhinitialdriveforce " .. stock)
 end
 
-local accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, "Modifies the vehicles acceleration", -100000, 100000, accelVal, 1, function(val, prev_val, click)
+local accelOpt = menu.slider_float(tuningMenu, "Acceleration", {"setaccel"}, "Modifies the vehicles acceleration\nSet to 0 to revert to stock", -100000, 100000, accelVal, 1, function(val, prev_val, click)
     if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
         return
+    end
+    if val == 0 then
+        stockAccel = true
     end
     if boosties == 0 then
         acceleration(val/100, 0)
@@ -2470,11 +2476,14 @@ local accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, 
     accelVal = val
 end)
 
-menu.on_blur(speedMods, function()
+menu.on_blur(tuningMenu, function()
     menu.delete(accelOpt)
-    accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, "Modifies the vehicles acceleration", -100000, 100000, accelVal, 1, function(val, prev_val, click)
+    accelOpt = menu.slider_float(tuningMenu, "Acceleration", {"setaccel"}, "Modifies the vehicles acceleration\nSet to 0 to revert to stock", -100000, 100000, accelVal, 1, function(val, prev_val, click)
         if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
             return
+        end
+        if val == 0 then
+            stockAccel = true
         end
         if boosties == 0 then
             acceleration(val/100, 0)
@@ -2837,7 +2846,7 @@ local driveBias = -1
 local awdBias = false
 local callSet = false
 
-local driveBiasSlider = menu.slider_float(speedMods, "Drive Bias", {"drivebias"}, "0 = RWD\n1 = FWD.\n It will respawn your car if you go from RWD or FWD to AWD, or any combo of the 3. Does not work with constructs unless car is already AWD", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
+local driveBiasSlider = menu.slider_float(tuningMenu, "Drive Bias", {"drivebias"}, "0 = RWD\n1 = FWD.\nThis will respawn your car if you go from RWD or FWD to AWD, or any combo of the 3.\nFor constructs, you will need to respawn the construct after having applied the bias", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
     if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
         return
     end
@@ -2869,6 +2878,69 @@ local driveBiasSlider = menu.slider_float(speedMods, "Drive Bias", {"drivebias"}
     end
 end)
 
+-------------------------------------- Set gears -----------------------------------------------------------------------------------------------------------------
+local stockGears = nil
+
+menu.slider(tuningMenu, "Gears", {"setgears"}, "Set number of gears\nSet to 0 for stock\nRecommend setting to 1 for CVT", 0, 8, 0, 1, function(num, prev_val, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+        return
+    end
+
+    local val = num * 1e-45
+
+    if num == 1 then
+        val = 0
+    elseif num == 0 then
+        val = stockGears
+    end
+
+    local adr = getHandlingAddress()
+    memory.write_float(adr + 0x50, val)
+
+    util.toast(memory.read_float(adr + 0x50))
+
+    SetFlags()
+end)
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+function SetBit(bits, place) 
+    return (bits | (place))
+end
+
+function ClearBit(bits, place)
+    return (bits & ~(place))
+end
+
+function BitTest(bits, place)
+    return (memory.read_int(bits) & (place)) ~= 0
+end
+
+--------------------- CVT -----------------------------------------------------------------------------------------------------------------------------------------------
+
+local cvtOpt = false
+local cvtMenu
+
+function build_veh_handling_menu(handling, offset)
+    local CAutomobile = entities.get_user_vehicle_as_pointer()
+    local data
+    CHandlingData = entities.vehicle_get_handling(CAutomobile)
+    data = CHandlingData
+
+    cvtMenu = menu.toggle(tuningMenu, "CVT", {"cvt"}, "Enable CVT\nFor cars that still shift, set gears to 1", function(on)
+        if on then
+            if CAutomobile != 0 then
+                memory.write_int(data + offset, SetBit(memory.read_int(data + offset), handling.bit))
+            end
+        else
+            CAutomobile = entities.get_user_vehicle_as_pointer()
+            if CAutomobile != 0 then
+                memory.write_int(data + offset, ClearBit(memory.read_int(data + offset), handling.bit))
+            end
+        end
+    end, BitTest(data + offset, handling.bit))
+    cvtOpt = true
+end
 
 util.create_tick_handler(function()
     if !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false) then
@@ -2884,11 +2956,27 @@ util.create_tick_handler(function()
         if accelVal != 0 then
             accelVal = 0
         end
+        if cvtOpt then
+            menu.delete(cvtMenu)
+            cvtOpt = false
+        end
+        if stockGears != nil then
+            stockGears = nil
+        end
     else
+        if !cvtOpt then
+            local handling = { name = "HF_CVT", bit = 1 << 12}
+            local offset = 0x128
+            build_veh_handling_menu(handling, offset)
+        end
         if accelVal == 0 then
             accelVal = math.floor((tonumber(string.format("%.3f", VEHICLE.GET_VEHICLE_ACCELERATION(get_user_car_id()))) * 100) + 0.5)
         end
         util.yield(500)
+        if stockGears == nil then
+            local adr = getHandlingAddress()
+            stockGears = memory.read_float(adr + 0x50)
+        end
         if driveBias == -1 then
             local adr = getHandlingAddress()
             local fwdBias = memory.read_float(adr + 0x48)
