@@ -2485,7 +2485,7 @@ local accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, 
         acceleration(val/100, boosties)
     end
     modAccelVal = val/100
-    accelVal = val/100
+    accelVal = val
 end)
 
 menu.on_blur(speedMods, function()
@@ -2500,7 +2500,7 @@ menu.on_blur(speedMods, function()
             acceleration(val/100, boosties)
         end
         modAccelVal = val/100
-        accelVal = val/100
+        accelVal = val
     end)
 end)
 
