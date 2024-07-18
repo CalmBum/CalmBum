@@ -2964,15 +2964,15 @@ util.create_tick_handler(function()
             stockGears = nil
         end
     else
+        if accelVal == 0 then
+            accelVal = math.floor((tonumber(string.format("%.3f", VEHICLE.GET_VEHICLE_ACCELERATION(get_user_car_id()))) * 100) + 0.5)
+        end
+        util.yield(500)
         if !cvtOpt then
             local handling = { name = "HF_CVT", bit = 1 << 12}
             local offset = 0x128
             build_veh_handling_menu(handling, offset)
         end
-        if accelVal == 0 then
-            accelVal = math.floor((tonumber(string.format("%.3f", VEHICLE.GET_VEHICLE_ACCELERATION(get_user_car_id()))) * 100) + 0.5)
-        end
-        util.yield(500)
         if stockGears == nil then
             local adr = getHandlingAddress()
             stockGears = memory.read_float(adr + 0x50)
