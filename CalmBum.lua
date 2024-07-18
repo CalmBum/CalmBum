@@ -82,6 +82,10 @@ function request_ptfx_asset(asset)
     end
 end
 
+function onFoot()
+    return !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false)
+end
+
 
 -- Menu tabs
 local vehList = menu.list(menu.my_root(), "Vehicle")
@@ -178,19 +182,20 @@ local speedMods = menu.list(vehList, "Speed Mods")
 
 --Boosties------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-menu.text_input(speedMods, "Boosties", {"boosties"}, "Modifies the vehicles top speed + power", function(speed, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 then
+local boosties = 0
+local modAccelVal = nil
+menu.text_input(speedMods, "Boosties", {"boosties"}, "This version must be used together with Acceleration.", function(speed, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
         return
     end
-    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
-        local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-        if tonumber(speed) != nil then
-            util.toast("Boosting")
-            VEHICLE.MODIFY_VEHICLE_TOP_SPEED(vehicle, speed) 
-        else
-            return
-        end
+    boosties = speed
+    if modAccelVal == nil then
+        local veh = get_user_car_id()
+        VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, speed)
+        util.toast("Boosted")
+    else
+        acceleration(modAccelVal, boosties)
+        util.toast("Boosted")
     end
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2451,56 +2456,58 @@ menu.hyperlink(update_stuff, "GitHub Source", "https://github.com/CalmBum/CalmBu
 menu.hyperlink(update_stuff, "Discord", "https://discord.gg/", "Open Discord Server")
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+--------------------------------- Acceleration -----------------------------------------------------
+local accelVal = 0
 
+function acceleration(val, boost)
+    local stock = menu.get_value(menu.ref_by_path("Vehicle>Movement>Handling Editor>Base>InitialDriveForce")) / 10000
+    local veh = get_user_car_id()
 
---Boot up---------
---Jackface DANCE--
-------------------
+    menu.trigger_commands("vhinitialdriveforce " .. 10)
+    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
 
-if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
-    local jackFace1 = filesystem.scripts_dir() .. '/lib/calmbum/jackface.png'
-    local jackFace2 = filesystem.scripts_dir() .. '/lib/calmbum/jackface2.png'
-    local imageStatus1, image1 = pcall(directx.create_texture, jackFace1)
-    local imageStatus2, image2 = pcall(directx.create_texture, jackFace2)
-    if not imageStatus1 then
-        debug_log("Failed to load image. "..tostring(image1))
-        return
-    end
-    if not imageStatus2 then
-        debug_log("Failed to load image. "..tostring(image2))
-        return
-    end
+    local mult = VEHICLE.GET_VEHICLE_ACCELERATION(veh) / 10
+    local num = val / mult
 
-      
-    -- Display pattern: jackface1, jackface2, jackface1, jackface2, jackface1
-    for j = 1, 5 do
-        local image = (j % 2 == 0) and image2 or image1  -- switch between jackface1 and jackface2
-        for i = 1.0, 0.8, -0.016 do
-            directx.draw_texture(image, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
-            util.yield(2)
-        end
-        for i = 0, 25 do
-            directx.draw_texture(image, 0.15, 0.15, 0.5, 0.8, 0.1, 0.8, 0, 1, 1, 1, 1)
-            util.yield()
-        end
-    end
+    menu.trigger_commands("vhinitialdriveforce " .. num)
+    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
 
-    -- Fade Out
-    for i = .8, 1, 0.016 do
-        directx.draw_texture(image1, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
-        util.yield(2)
-    end
+    menu.trigger_commands("vhinitialdriveforce " .. stock)
 end
 
--- idk keeps stuff running?
-util.keep_running()
+local accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, "Modifies the vehicles acceleration", -100000, 100000, accelVal, 1, function(val, prev_val, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+        return
+    end
+    if boosties == 0 then
+        acceleration(val/100, 0)
+    else
+        acceleration(val/100, boosties)
+    end
+    modAccelVal = val/100
+    accelVal = val/100
+end)
+
+menu.on_blur(speedMods, function()
+    menu.delete(accelOpt)
+    accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, "Modifies the vehicles acceleration", -100000, 100000, accelVal, 1, function(val, prev_val, click)
+        if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+            return
+        end
+        if boosties == 0 then
+            acceleration(val/100, 0)
+        else
+            acceleration(val/100, boosties)
+        end
+        modAccelVal = val/100
+        accelVal = val/100
+    end)
+end)
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
 
 
------------------------------------------------------------
------------------------------------------------------------
-------TESTING ZONE-----------------------------------------
------------------------------------------------------------
-
+----------------------- drive bias -------------------------------------------------------------------------------------------------------------------------
 
 ----- this entire car copying section is stolen from acjoker, thank you for making my life so easy <3 ------------------------------
 
@@ -2810,7 +2817,7 @@ function SetFlags()
             util.yield(100)
             acceleration(accel, boost)
         end
-    else
+    elseif accel ~= nil then
         util.yield(100)
         acceleration(accel, boost)
     end
@@ -2819,9 +2826,6 @@ function SetFlags()
     io.remove(CloneVehextra_Setting)
 end
 ------------------ everybody say "I LOVE YOU JOKER" ------------------------------------------------------------------------------------------------------------------------
-
-
-
 
 
 ------ majority of this is stolen from Wiri, everyone give Wiri a big hug -----------------------------------------------------------------------
@@ -2921,86 +2925,49 @@ util.create_tick_handler(function()
     end
 end)
 
+------------------------------------------------------------------------------------------------------------------------------------------
 
 
+--Boot up---------
+--Jackface DANCE--
+------------------
 
-local boosties = 0
-local modAccelVal = nil
-local accelVal = 0
-
-menu.text_input(speedMods, "Boosties v2", {"boosties"}, "This version must be used together with Acceleration.", function(speed, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
+    local jackFace1 = filesystem.scripts_dir() .. '/lib/calmbum/jackface.png'
+    local jackFace2 = filesystem.scripts_dir() .. '/lib/calmbum/jackface2.png'
+    local imageStatus1, image1 = pcall(directx.create_texture, jackFace1)
+    local imageStatus2, image2 = pcall(directx.create_texture, jackFace2)
+    if not imageStatus1 then
+        debug_log("Failed to load image. "..tostring(image1))
         return
     end
-    boosties = speed
-    if modAccelVal == nil then
-        local veh = get_user_car_id()
-        VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, speed)
-        util.toast("Boosted")
-    else
-        acceleration(modAccelVal, boosties)
-        util.toast("Boosted")
-    end
-end)
-
-function acceleration(val, boost)
-    local stock = menu.get_value(menu.ref_by_path("Vehicle>Movement>Handling Editor>Base>InitialDriveForce")) / 10000
-    local veh = get_user_car_id()
-
-    menu.trigger_commands("vhinitialdriveforce " .. 10)
-    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
-
-    local mult = VEHICLE.GET_VEHICLE_ACCELERATION(veh) / 10
-    local num = val / mult
-
-    menu.trigger_commands("vhinitialdriveforce " .. num)
-    VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
-
-    menu.trigger_commands("vhinitialdriveforce " .. stock)
-end
-
-local accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, "Modifies the vehicles acceleration", -100000, 100000, accelVal, 1, function(val, prev_val, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+    if not imageStatus2 then
+        debug_log("Failed to load image. "..tostring(image2))
         return
     end
-    if boosties == 0 then
-        acceleration(val/100, 0)
-    else
-        acceleration(val/100, boosties)
+
+      
+    -- Display pattern: jackface1, jackface2, jackface1, jackface2, jackface1
+    for j = 1, 5 do
+        local image = (j % 2 == 0) and image2 or image1  -- switch between jackface1 and jackface2
+        for i = 1.0, 0.8, -0.016 do
+            directx.draw_texture(image, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
+            util.yield(2)
+        end
+        for i = 0, 25 do
+            directx.draw_texture(image, 0.15, 0.15, 0.5, 0.8, 0.1, 0.8, 0, 1, 1, 1, 1)
+            util.yield()
+        end
     end
-    modAccelVal = val/100
-end)
 
-menu.on_blur(speedMods, function()
-    menu.delete(accelOpt)
-    accelOpt = menu.slider_float(speedMods, "Acceleration", {"acceleration"}, "Modifies the vehicles acceleration", -100000, 100000, accelVal, 1, function(val, prev_val, click)
-        if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
-            return
-        end
-        if boosties == 0 then
-            acceleration(val/100, 0)
-        else
-            acceleration(val/100, boosties)
-        end
-        modAccelVal = val/100
-    end)
-end)
-
-function onFoot()
-    return !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false)
+    -- Fade Out
+    for i = .8, 1, 0.016 do
+        directx.draw_texture(image1, 0.15, 0.15, 0.5, i, 0.1, i, 0, 1, 1, 1, 1)
+        util.yield(2)
+    end
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
+-- idk keeps stuff running?
+util.keep_running()
 
 --[[Can add more from here]]--
