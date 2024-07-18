@@ -2897,8 +2897,6 @@ menu.slider(tuningMenu, "Gears", {"setgears"}, "Set number of gears\nSet to 0 fo
     local adr = getHandlingAddress()
     memory.write_float(adr + 0x50, val)
 
-    util.toast(memory.read_float(adr + 0x50))
-
     SetFlags()
 end)
 
