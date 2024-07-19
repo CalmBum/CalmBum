@@ -6,7 +6,7 @@
 ░╚════╝░╚═╝░░╚═╝╚══════╝╚═╝░░░░░╚═╝╚═════╝░░╚═════╝░╚═╝░░░░░╚═╝
 
 
-This is a passion project from SuccMyBum and Calpernia_
+This is a passion project from SuccMyBum and _-Cal-_
 
 Artwork by Tilian
 
