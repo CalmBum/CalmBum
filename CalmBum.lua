@@ -705,12 +705,12 @@ end
 --Drift Cam Assist------------------------------------------------------------------------------------------------------------------------------------------------
 
 menu.toggle_loop(vehList, "Drift Cam Assist", {}, "Prevents the camera from going crazy every time you tap ebrake", function()
-    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pId)
-    local moving = ENTITY.GET_ENTITY_VELOCITY(get_user_car_id())
-    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and (math.abs(moving.x) > 1 or math.abs(moving.y) > 1) and PAD.GET_CONTROL_NORMAL(1, 1) == 0 then
+    if onFoot() then
+        return
+    end
+    local moving = ENTITY.GET_ENTITY_SPEED(get_user_car_id())
+    if moving > 5 and PAD.GET_CONTROL_NORMAL(1, 1) == 0 then
         PAD.SET_CONTROL_VALUE_NEXT_FRAME(2, 2, -0.26)
-    elseif !PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
-        util.toast("Player is not in a vehicle")
     end
 end)
 
