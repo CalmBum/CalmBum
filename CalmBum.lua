@@ -14,7 +14,7 @@ util.require_natives("1672190175")
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.5.1"
+local SCRIPT_VERSION = "6.5.2"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -699,7 +699,110 @@ function resetNeon(veh, lights, side, front, back)
     end
 end
 
+--Circle RGB-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+
+local rgbCir = menu.list(vehList, "Circle RGB")
+local lightsCir = {r = memory.alloc(8), g = memory.alloc(8), b = memory.alloc(8)}
+local enableCir = false
+local savedCir = false
+local sideCir = false
+local frontCir = false
+local backCir = false
+local fancyCir = false
+local runningCir = false
+local rotCir
+local vehCir
+local delayCir = 100
+local colourCir = {colour = {r = 0, g = 1, b = 0, a = 1}}
+
+function circleRgb()
+    if onFoot() then
+        return
+    end
+    runningCir = true
+
+    -- if vehicle does not match saved vehicle then reset saved vehicles lights and save new vehicle
+    if vehCir != get_user_car_id() and vehCir != nil then
+        resetNeon(vehCir, lightsCir, sideCir, frontCir, backCir)
+        savedCir = false
+    end
+
+    -- save car/neon/colour
+    if !savedCir then
+        -- save car
+        vehCir = get_user_car_id()
+        sideCir, frontCir, backCir = saveNeon(vehCir, lightsCir)
+        for i = 1, 3, 1 do
+            if VEHICLE.GET_VEHICLE_NEON_ENABLED(vehCir, i) then   -- check if neon is enabled
+                colourCir.colour.r = memory.read_int(lightsCir.r)
+                colourCir.colour.g = memory.read_int(lightsCir.g)
+                colourCir.colour.b = memory.read_int(lightsCir.b)
+            end
+        end
+        savedCir = true
+    end
+
+    local neanSequence
+    if rotCir == 1 then
+        neonSequence = {2, 0, 3, 1}
+        if fancyCir then
+            rotCir = 2
+        end
+    elseif rotCir == 2 then
+        neonSequence = {1, 3, 0, 2}
+        if fancyCir then
+            rotCir = 1
+        end
+    end
+    local red = math.floor(colourCir.colour.r * 255)
+    local green = math.floor(colourCir.colour.g * 255)
+    local blue = math.floor(colourCir.colour.b * 255)
+
+    VEHICLE.SET_VEHICLE_NEON_COLOUR(vehCir, red, green, blue)
+    for _, neon in ipairs(neonSequence) do
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehCir, neon, true)
+        util.yield(delayCir)
+        VEHICLE.SET_VEHICLE_NEON_ENABLED(vehCir, neon, false)
+    end
+    runningCir = false
+end
+
+menu.list_action(rgbCir, "Circular Neons", {"circlergb"}, "Make the neons go in a circle around the car", {{1, "Off"}, {2, "Clockwise"}, {3, "Counterclockwise"}, {4, "Fancy"}}, function(value, menu_name, click)
+    if value == 1 then
+        enableCir = false
+        savedCir = false
+        fancyCir = false
+        while runningCir do
+            util.yield_once()
+        end
+        resetNeon(vehCir, lightsCir, sideCir, frontCir, backCir)
+    elseif value == 2 then
+        rotCir = 2
+        enableCir = true
+    elseif value == 3 then
+        rotCir = 1
+        enableCir = true
+    elseif value == 4 then
+        rotCir = 1
+        fancyCir = true
+        enableCir = true
+    end
+end)
+
+util.create_tick_handler(function()
+    if enableCir then
+        circleRgb()
+    end
+end)
+
+menu.slider(rgbCir, "Speed", {}, "Speed", 0, 1000, 100, 10, function(speed)
+    delayCir = speed
+end)
+
+menu.colour(rgbCir, "Custom colour", {}, "Choose custom colour for neon", colourCir.colour, false, function(colour)
+    colourCir.colour = colour
+end)
 
 
 --Drift Cam Assist------------------------------------------------------------------------------------------------------------------------------------------------
@@ -983,28 +1086,7 @@ end, function()
     auto_off = false
 end)
   
-  
---Player Shit
-
-menu.action(plyList, "Take A Shit", {"shit"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
-
-    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    if not PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
-        STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
-        STREAMING.REQUEST_ANIM_DICT("shit_loop_trev")
-        while not STREAMING.HAS_ANIM_DICT_LOADED("missfbi3ig_0") do
-            util.yield(0)
-            STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
-            STREAMING.REQUEST_ANIM_DICT("shit_loop_trev")
-        end
-        TASK.TASK_PLAY_ANIM(PLAYER.GET_PLAYER_PED(players.user()), "missfbi3ig_0", "shit_loop_trev", 8.0, 8.0, 2000, 0.0, 0.0, true, true, true)
-        util.yield(1500)
-        local object_ = OBJECT.CREATE_OBJECT(MISC.GET_HASH_KEY("prop_big_shit_02"), players.get_position(players.user()).x, players.get_position(players.user()).y, players.get_position(players.user()).z - 0.6, true, true)
-        NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(object_)
-        ENTITY.APPLY_FORCE_TO_ENTITY(object_, 3, 0, 0, -10, 0, 0, 0, false, false)
-    end
-end)
-  
+   
   
 --EWO--
   
@@ -1058,55 +1140,95 @@ menu.action(plyList, "Self Defense Nuke ", {"Self Defense Nuke"}, "Nuke that mf 
     executeNuke(nuke_position, nuke_height)
     func.create_nuke_explosion(nuke_position)
 end)
-  
-  
---Rocket Man--
-  
-local rocket_man_bool = false
-  
-menu.action(plyList, "Rocket Man", {}, "", function()
-    if get_user_car_id() == 0 then
-        local position = v3.new()
-        PED.SET_PED_TO_RAGDOLL(PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID()), 2500, 0, 0)
-        local forces = {10, 15, 20, 20, 20, 10, 10, 10, 10, 10, 10}
-        local delays = {1000, 900, 800, 700, 600, 500, 400, 300, 200, 175, 125}
-  
-        local ptfx1 = {"cut_xm3", "cut_xm3_rpg_explosion"}
-        local ptfx2 = {"scr_xm_orbital", "scr_xm_orbital_blast"}
-        STREAMING.REQUEST_NAMED_PTFX_ASSET(ptfx1[1])
-        STREAMING.REQUEST_NAMED_PTFX_ASSET(ptfx2[1])
-  
-        for i = 1, #forces do
-            ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 3, 0.0, 0.0, forces[i], 0.0, 0.0, 0.0, 0, false, false, true, false, false)
-            position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
-            GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx1[1])
-            GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx1[2], position.x, position.y, position.z-0.5, 0, 0, 0, 1.0, false, false, false)
-            AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Countdown_Beep", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
-            util.yield(delays[i])
+
+
+
+--Player Shit
+
+menu.action(plyList, "Take A Shit", {"shit"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
+
+    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+    if not PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
+        STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
+        STREAMING.REQUEST_ANIM_DICT("shit_loop_trev")
+        while not STREAMING.HAS_ANIM_DICT_LOADED("missfbi3ig_0") do
+            util.yield(0)
+            STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
+            STREAMING.REQUEST_ANIM_DICT("shit_loop_trev")
         end
-  
-        for i = 1, 2 do
-            local delay = util.current_time_millis() + 500
-            repeat
-                ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 3, 0.0, 0.0, 10, 0.0, 0.0, 0.0, 0, false, false, true, false, false)
-                position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
-                GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx1[1])
-                GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx1[2], position.x, position.y, position.z-0.5, 0, 0, 0, 1.0, false, false, false)
-                AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Countdown_Beep", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
-                util.yield(i == 1 and 100 or 10)
-            until delay <= util.current_time_millis()
-        end
-          
-        AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bomb_Detonate", players.user_ped(), "DLC_MPSUM2_ULP2_Rogue_Drones", true, false)
-        position = ENTITY.GET_ENTITY_COORDS(players.user_ped())
-        GRAPHICS.USE_PARTICLE_FX_ASSET(ptfx2[1])
-        GRAPHICS.START_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx2[2], position.x, position.y, position.z, 0, 180, 0, 1.0, false, false, false)
-        STREAMING.REMOVE_PTFX_ASSET(ptfx1[1])
-        STREAMING.REMOVE_PTFX_ASSET(ptfx2[1])
-    else
-        util.toast("You need to be on foot for this option.")
+        TASK.TASK_PLAY_ANIM(PLAYER.GET_PLAYER_PED(players.user()), "missfbi3ig_0", "shit_loop_trev", 8.0, 8.0, 2000, 0.0, 0.0, true, true, true)
+        util.yield(1500)
+        local object_ = OBJECT.CREATE_OBJECT(MISC.GET_HASH_KEY("prop_big_shit_02"), players.get_position(players.user()).x, players.get_position(players.user()).y, players.get_position(players.user()).z - 0.6, true, true)
+        NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(object_)
+        ENTITY.APPLY_FORCE_TO_ENTITY(object_, 3, 0, 0, -10, 0, 0, 0, false, false)
     end
 end)
+
+
+--Shit Rider---------------------------------------------------------------------------------------------------------------
+local state = 0
+local object = 0
+
+menu.toggle_loop(menu.my_root(), "Magic Poo", {""}, "Behold! Thine magical poo!", function()
+	if state == 0 then
+		local objHash <const> = util.joaat("prop_ld_toilet_01")
+		util.request_model(objHash)
+		STREAMING.REQUEST_ANIM_DICT("timetable@ron@ig_3_couch")
+		while not STREAMING.HAS_ANIM_DICT_LOADED("timetable@ron@ig_3_couch") do
+			util.yield_once()
+		end
+		local localPed = players.user_ped()
+		local pos = ENTITY.GET_ENTITY_COORDS(localPed, false)
+		TASK.CLEAR_PED_TASKS_IMMEDIATELY(localPed)
+		object = entities.create_object(objHash, pos)
+		ENTITY.ATTACH_ENTITY_TO_ENTITY(
+			localPed, object, 0, 0, 0, 0, 0, 0, 0, false, true, false, false, 0, true, false
+		)
+		ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(object, false, false)
+		TASK.TASK_PLAY_ANIM(localPed, "timetable@ron@ig_3_couch", "Base", 8.0, -8.0, -1, 1, 0.0, false, false, false)
+		state = 1
+
+	elseif state == 1 then
+		HUD.DISPLAY_SNIPER_SCOPE_THIS_FRAME()
+		local objPos = ENTITY.GET_ENTITY_COORDS(object, false)
+		local camrot = CAM.GET_GAMEPLAY_CAM_ROT(0)
+		ENTITY.SET_ENTITY_ROTATION(object, 0, 0, camrot.z, 0, true)
+		local forwardV = ENTITY.GET_ENTITY_FORWARD_VECTOR(players.user_ped())
+		forwardV.z = 0.0
+		local delta = v3.new(0, 0, 0)
+		local speed = 0.2
+		if PAD.IS_CONTROL_PRESSED(0, 61) then
+			speed = 1.5
+		end
+		if PAD.IS_CONTROL_PRESSED(0, 32) then
+			delta = v3.new(forwardV)
+			delta:mul(speed)
+		end
+		if PAD.IS_CONTROL_PRESSED(0, 130)  then
+			delta = v3.new(forwardV)
+			delta:mul(-speed)
+		end
+		if PAD.IS_DISABLED_CONTROL_PRESSED(0, 22) then
+			delta.z = speed
+		end
+		if PAD.IS_CONTROL_PRESSED(0, 36) then
+			delta.z = -speed
+		end
+		local newPos = v3.new(objPos)
+		newPos:add(delta)
+		ENTITY.SET_ENTITY_COORDS(object, newPos.x, newPos.y, newPos.z, false, false, false, false)
+        
+	end
+end, function ()
+	TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
+	ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
+	ENTITY.SET_ENTITY_VISIBLE(object, false, false)
+	entities.delete_by_handle(object)
+	state = 0
+end)
+
+
+  
 
 
 -----------------------------------
