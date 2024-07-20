@@ -1165,16 +1165,16 @@ menu.action(plyList, "Take A Shit", {"shit"}, "You see that ugly ass car? Go pop
 end)
 
 
---Shit Rider---------------------------------------------------------------------------------------------------------------
+--Magic Poo---------------------------------------------------------------------------------------------------------------
 local state = 0
 local object = 0
 
-menu.toggle_loop(plyList, "Magic Poo", {""}, "Behold! Thine magical poo!", function()
+menu.toggle_loop(plyList, "Magic Poo", {"Magic Poo"}, "Behold! Thine magical poo!", function()
 	if state == 0 then
-		local objHash <const> = util.joaat("prop_ld_toilet_01")
+		local objHash <const> = util.joaat("prop_big_shit_02")
 		util.request_model(objHash)
-		STREAMING.REQUEST_ANIM_DICT("timetable@ron@ig_3_couch")
-		while not STREAMING.HAS_ANIM_DICT_LOADED("timetable@ron@ig_3_couch") do
+		STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
+		while not STREAMING.HAS_ANIM_DICT_LOADED("missfbi3ig_0") do
 			util.yield_once()
 		end
 		local localPed = players.user_ped()
@@ -1182,10 +1182,10 @@ menu.toggle_loop(plyList, "Magic Poo", {""}, "Behold! Thine magical poo!", funct
 		TASK.CLEAR_PED_TASKS_IMMEDIATELY(localPed)
 		object = entities.create_object(objHash, pos)
 		ENTITY.ATTACH_ENTITY_TO_ENTITY(
-			localPed, object, 0, 0, 0, 0, 0, 0, 0, false, true, false, false, 0, true, false
+			localPed, object, 0, 0, -0.2, 1.0, 0.0, 0.0, 0.0, false, true, false, false, 0, true, false
 		)
 		ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(object, false, false)
-		TASK.TASK_PLAY_ANIM(localPed, "timetable@ron@ig_3_couch", "Base", 8.0, -8.0, -1, 1, 0.0, false, false, false)
+		TASK.TASK_PLAY_ANIM(localPed, "missfbi3ig_0", "shit_loop_trev", 8.0, -8.0, -1, 1, 0.0, false, false, false)
 		state = 1
 
 	elseif state == 1 then
@@ -1227,8 +1227,6 @@ end, function ()
 	state = 0
 end)
 
-
-  
 
 
 -----------------------------------
