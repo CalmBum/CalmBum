@@ -14,7 +14,7 @@ util.require_natives("1672190175")
 
 --Auto Updater Stuffs--
 
-local SCRIPT_VERSION = "6.5.2"
+local SCRIPT_VERSION = "6.5.3"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
@@ -977,41 +977,37 @@ menu.toggle_loop(vehList, "Countermeasure Flares", {"force_spawn_countermeasures
         util.toast("Shoot")
     end
 end)
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
 
 
 -----------------------------------
 --Player---------------------------
 -----------------------------------
 
---Ragdoll--
+--Ragdoll--------------------------------------------------------------------------------------------------------------------------------
 
-menu.action(plyList, "Ragdoll" , {"ragdoll"}, "Parkour!", function()
+local ragList = menu.list(plyList, "Ragdoll")
+
+
+
+menu.action(ragList, "Ragdoll" , {"ragdoll"}, "Parkour!", function()
     PED.SET_PED_TO_RAGDOLL(PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID()), 2500, 0, 0)
 end)
   
-menu.toggle_loop(plyList, "Ragdoll loop" , {"ragdoll loop"}, "Should have gotten LifeAlert! Now look at ya!", function()
+menu.toggle_loop(ragList, "Ragdoll loop" , {"ragdoll loop"}, "Should have gotten LifeAlert! Now look at ya!", function()
       PED.SET_PED_TO_RAGDOLL(PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID()), 2500, 0, 0)
 end)
   
   
-  --Stumble--
+  --Stumble----------------------------------------------------------------------------------------------------------------------------
   
-menu.action(plyList, "Stumble", {'Stumble'}, "oi m8! yew shuvv me again an ile wet ya!", function()
+menu.action(ragList, "Stumble", {'Stumble'}, "oi m8! yew shuvv me again an ile wet ya!", function()
     local vector = ENTITY.GET_ENTITY_FORWARD_VECTOR(players.user_ped())
     PED.SET_PED_TO_RAGDOLL_WITH_FALL(players.user_ped(), 1500, 2000, 2, vector.x, -vector.y, vector.z, 1, 0, 0, 0, 0, 0, 0)
 end)
   
 local fallTimeout = false
   
-menu.toggle(plyList, "Stumble over", {'Stumble over'}, "Few too many beers m8", function(on)
+menu.toggle(ragList, "Stumble over", {'Stumble over'}, "Few too many beers m8", function(on)
     if on then
         local vector = ENTITY.GET_ENTITY_FORWARD_VECTOR(players.user_ped())
         PED.SET_PED_TO_RAGDOLL_WITH_FALL(players.user_ped(), 1500, 2000, 2, vector.x, -vector.y, vector.z, 1, 0, 0, 0, 0, 0, 0)
@@ -1024,9 +1020,9 @@ menu.toggle(plyList, "Stumble over", {'Stumble over'}, "Few too many beers m8", 
 end)
   
   
-  --Parkour!--
+--Parkour!------------------------------------------------------------------------------------------------------------------------
   
-menu.action(plyList, "Parkour!" , {"Parkour!"}, "RUN! JUMP! ..THROW A GRENADE?", function()
+menu.action(ragList, "Parkour!" , {"Parkour!"}, "RUN! JUMP! ..THROW A GRENADE?", function()
     PED.SET_PED_TO_RAGDOLL(PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID()), 6, 20, 20)
     for i = 1, 10 do
         ENTITY.APPLY_FORCE_TO_ENTITY(players.user_ped(), 1, 0, 0, 50, 0, 0, 0, false, false, false, false, false, false)
@@ -1034,7 +1030,7 @@ menu.action(plyList, "Parkour!" , {"Parkour!"}, "RUN! JUMP! ..THROW A GRENADE?",
 end)
   
   
---BREAK DANCE--
+--BREAK DANCE-------------------------------------------------------------------------------------------------------------------------------
   
 local break_dance_rotation = 0
 local loop_count = 0
@@ -1086,64 +1082,9 @@ end, function()
     auto_off = false
 end)
   
-   
-  
---EWO--
-  
-menu.action(plyList, "Explode Myself" , {"explodemyself"}, "ALLAHU AKABAR!!", function()
-    local pos = ENTITY.GET_ENTITY_COORDS(players.user_ped(), false)
-    pos.z = pos.z - 1.0
-    FIRE.ADD_OWNED_EXPLOSION(players.user_ped(), pos.x, pos.y, pos.z, 0, 1.0, true, false, 1.0)
-end)
-  
-  
--- Nuke Self--
-  
-func = {}
-func.create_nuke_explosion = function(pos)
-    --Place custom boom here later--
-end
-
-local function executeNuke(pos, nuke_height)
-    for a = 0, nuke_height, 4 do
-        FIRE.ADD_EXPLOSION(pos.x, pos.y, pos.z + a, 8, 50.0, true, false, 1.5, false)                         
-        util.yield(50)
-    end
-    FIRE.ADD_EXPLOSION(pos.x +8, pos.y +8, pos.z + nuke_height, 82, 30.0, true, false, 1.5, false) 
-    FIRE.ADD_EXPLOSION(pos.x -8, pos.y +8, pos.z + nuke_height, 82, 30.0, true, false, 1.5, false) 
-    FIRE.ADD_EXPLOSION(pos.x -8, pos.y -8, pos.z + nuke_height, 82, 30.0, true, false, 1.5, false) 
-    FIRE.ADD_EXPLOSION(pos.x +8, pos.y -8, pos.z + nuke_height, 82, 30.0, true, false, 1.5, false) 
-  
-    -- Call the create_nuke_explosion function
-    func.create_nuke_explosion(pos)
-end
-  
-menu.action(plyList, "Self Defense Nuke ", {"Self Defense Nuke"}, "Nuke that mf chasing you!", function()
-    local hash = util.joaat("prop_military_pickup_01")
-    util.request_model(hash)
-    local player_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(players.user_ped(), 0.0, 0.0, 55.0) -- Spawn nuke 20 meters above the player
-  
-    local nuke = entities.create_object(hash, player_pos)
-    STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(hash)
-    ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(nuke, players.user_ped(), false)
-    ENTITY.APPLY_FORCE_TO_ENTITY(nuke, 1, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true) -- Apply downward force to make the nuke fall
-  
-    while not ENTITY.HAS_ENTITY_COLLIDED_WITH_ANYTHING(nuke) do
-        util.yield(0)
-    end
-  
-    local nuke_position = ENTITY.GET_ENTITY_COORDS(nuke, true)
-    entities.delete_by_handle(nuke)
-  
-      
-    local nuke_height = 70  
-    executeNuke(nuke_position, nuke_height)
-    func.create_nuke_explosion(nuke_position)
-end)
 
 
-
---Player Shit
+--Player Shit-----------------------------------------------------------------------------------------------------------------
 
 menu.action(plyList, "Take A Shit", {"shit"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
 
@@ -1227,6 +1168,123 @@ end, function ()
 	state = 0
 end)
 
+
+--Shit Rider---------------------------------------------------------------------------------------------------------------------------
+
+local stateShit = 0
+local objectShit = 0
+
+menu.toggle_loop(plyList, "Shitter ride", {""}, "", function()
+    if stateShit == 0 then
+        local objHash <const> = util.joaat("prop_ld_toilet_01")
+        util.request_model(objHash)
+        STREAMING.REQUEST_ANIM_DICT("timetable@ron@ig_3_couch")
+        while not STREAMING.HAS_ANIM_DICT_LOADED("timetable@ron@ig_3_couch") do
+            util.yield_once()
+        end
+        local localPed = players.user_ped()
+        local pos = ENTITY.GET_ENTITY_COORDS(localPed, false)
+        TASK.CLEAR_PED_TASKS_IMMEDIATELY(localPed)
+        objectShit = entities.create_object(objHash, pos)
+        ENTITY.ATTACH_ENTITY_TO_ENTITY(
+            localPed, objectShit, 0, 0, -0.5, 0.62, 0, 0, 180, false, true, false, true, 0, true, false
+        )
+        ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(objectShit, false, false)
+        TASK.TASK_PLAY_ANIM(localPed, "timetable@ron@ig_3_couch", "Base", 8.0, -8.0, -1, 1, 0.0, false, false, false)
+        stateShit = 1
+
+    elseif stateShit == 1 then
+        HUD.DISPLAY_SNIPER_SCOPE_THIS_FRAME()
+        local objPos = ENTITY.GET_ENTITY_COORDS(objectShit, false)
+        local camrot = CAM.GET_GAMEPLAY_CAM_ROT(0)
+        ENTITY.SET_ENTITY_ROTATION(objectShit, 0, 0, camrot.z - 180, 0, true)
+        local forwardV = ENTITY.GET_ENTITY_FORWARD_VECTOR(players.user_ped())
+        forwardV.z = 0.0
+        local delta = v3.new(0, 0, 0)
+        local speed = 0.2
+        if PAD.IS_CONTROL_PRESSED(0, 61) then
+            speed = 1.5
+        end
+        if PAD.IS_CONTROL_PRESSED(0, 32) then
+            delta = v3.new(forwardV)
+            delta:mul(speed)
+        end
+        if PAD.IS_CONTROL_PRESSED(0, 130)  then
+            delta = v3.new(forwardV)
+            delta:mul(-speed)
+        end
+        if PAD.IS_DISABLED_CONTROL_PRESSED(0, 22) then
+            delta.z = speed
+        end
+        if PAD.IS_CONTROL_PRESSED(0, 36) then
+            delta.z = -speed
+        end
+        local newPos = v3.new(objPos)
+        newPos:add(delta)
+        ENTITY.SET_ENTITY_COORDS(objectShit, newPos.x, newPos.y, newPos.z, false, false, false, false)
+
+    end
+end, function ()
+    TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
+    ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
+    ENTITY.SET_ENTITY_VISIBLE(objectShit, false, false)
+    entities.delete_by_handle(objectShit)
+    stateShit = 0
+end)
+
+  
+--EWO----------------------------------------------------------------------------------------------------------------------------------
+  
+menu.action(plyList, "Explode Myself" , {"explodemyself"}, "ALLAHU AKABAR!!", function()
+    local pos = ENTITY.GET_ENTITY_COORDS(players.user_ped(), false)
+    pos.z = pos.z - 1.0
+    FIRE.ADD_OWNED_EXPLOSION(players.user_ped(), pos.x, pos.y, pos.z, 0, 1.0, true, false, 1.0)
+end)
+  
+  
+-- Nuke Self---------------------------------------------------------------------------------------------------------------------------------
+  
+func = {}
+func.create_nuke_explosion = function(pos)
+    --Place custom boom here later--
+end
+
+local function executeNuke(pos, nuke_height)
+    for a = 0, nuke_height, 4 do
+        FIRE.ADD_EXPLOSION(pos.x, pos.y, pos.z + a, 8, 50.0, true, false, 1.5, false)                         
+        util.yield(50)
+    end
+    FIRE.ADD_EXPLOSION(pos.x +8, pos.y +8, pos.z + nuke_height, 82, 30.0, true, false, 1.5, false) 
+    FIRE.ADD_EXPLOSION(pos.x -8, pos.y +8, pos.z + nuke_height, 82, 30.0, true, false, 1.5, false) 
+    FIRE.ADD_EXPLOSION(pos.x -8, pos.y -8, pos.z + nuke_height, 82, 30.0, true, false, 1.5, false) 
+    FIRE.ADD_EXPLOSION(pos.x +8, pos.y -8, pos.z + nuke_height, 82, 30.0, true, false, 1.5, false) 
+  
+    -- Call the create_nuke_explosion function
+    func.create_nuke_explosion(pos)
+end
+  
+menu.action(plyList, "Self Defense Nuke ", {"Self Defense Nuke"}, "Nuke that mf chasing you!", function()
+    local hash = util.joaat("prop_military_pickup_01")
+    util.request_model(hash)
+    local player_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(players.user_ped(), 0.0, 0.0, 55.0) -- Spawn nuke 20 meters above the player
+  
+    local nuke = entities.create_object(hash, player_pos)
+    STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(hash)
+    ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(nuke, players.user_ped(), false)
+    ENTITY.APPLY_FORCE_TO_ENTITY(nuke, 1, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true) -- Apply downward force to make the nuke fall
+  
+    while not ENTITY.HAS_ENTITY_COLLIDED_WITH_ANYTHING(nuke) do
+        util.yield(0)
+    end
+  
+    local nuke_position = ENTITY.GET_ENTITY_COORDS(nuke, true)
+    entities.delete_by_handle(nuke)
+  
+      
+    local nuke_height = 70  
+    executeNuke(nuke_position, nuke_height)
+    func.create_nuke_explosion(nuke_position)
+end)
 
 
 -----------------------------------
