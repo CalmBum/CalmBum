@@ -1169,7 +1169,7 @@ end)
 local state = 0
 local object = 0
 
-menu.toggle_loop(menu.my_root(), "Magic Poo", {""}, "Behold! Thine magical poo!", function()
+menu.toggle_loop(plyList, "Magic Poo", {""}, "Behold! Thine magical poo!", function()
 	if state == 0 then
 		local objHash <const> = util.joaat("prop_ld_toilet_01")
 		util.request_model(objHash)
