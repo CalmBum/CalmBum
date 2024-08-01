@@ -1248,7 +1248,7 @@ function clutchKick(percent)
     end
 end
 
-menu.toggle(transList, "Enable Clutch", {}, 'Press aim (LB/RMB) to disengage the clutch\nIf you are on throttle when re-engaging you will get a bit of a "clutch kick"', function(on)
+menu.toggle(transList, "Enable Clutch", {"clutchcb"}, 'Press aim (LB/RMB) to disengage the clutch\nIf you are on throttle when re-engaging you will get a bit of a "clutch kick"', function(on)
     if on then
         enableClutch = true
     end 
