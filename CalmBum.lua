@@ -581,23 +581,6 @@ end)
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
---Smooth shifting------------------------------------------------------------------------------------------------------------------------------------------------
-menu.toggle_loop(tuneList, "Smooth shifting", {"smoothshiftcb"}, "Prevents the car from gripping up when shifting\nCan be helpful when drifting", function()
-    if onFoot() then
-        return
-    end
-
-    local veh = entities.get_user_vehicle_as_pointer()
-    local curGear = entities.get_current_gear(veh)
-    local nextGear = VEHICLE._GET_VEHICLE_DESIRED_DRIVE_GEAR(get_user_car_id())
-
-    if nextGear ~= curGear and PAD.GET_CONTROL_NORMAL(71, 71) == 1.0 then
-        entities.set_current_gear(veh, nextGear)
-        entities.set_next_gear(veh, nextGear)
-    end
-end)
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 --------------------- CVT -----------------------------------------------------------------------------------------------------------------------------------------------
 function SetBit(bits, place) 
     return (bits | (place))
@@ -1314,6 +1297,23 @@ util.create_tick_handler(function()
                 clutchKick(PAD.GET_CONTROL_NORMAL(71, 71))
             end
         end
+    end
+end)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Smooth shifting------------------------------------------------------------------------------------------------------------------------------------------------
+menu.toggle_loop(transList, "Smooth shifting", {"smoothshiftcb"}, "Prevents the car from gripping up when shifting\nCan be helpful when drifting\nSometimes feels absolutely awful :)", function()
+    if onFoot() then
+        return
+    end
+
+    local veh = entities.get_user_vehicle_as_pointer()
+    local curGear = entities.get_current_gear(veh)
+    local nextGear = VEHICLE._GET_VEHICLE_DESIRED_DRIVE_GEAR(get_user_car_id())
+
+    if nextGear ~= curGear and PAD.GET_CONTROL_NORMAL(71, 71) == 1.0 then
+        entities.set_current_gear(veh, nextGear)
+        entities.set_next_gear(veh, nextGear)
     end
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
