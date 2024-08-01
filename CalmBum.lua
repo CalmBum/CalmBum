@@ -423,12 +423,10 @@ end
 
 function getCurrentGears()
     local gears = math.floor(memory.read_float(adr + 0x50) / 1e-45)
-    if gears == 0 then -- special cases, airtug for example
-        table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
-    elseif gears == 1 then -- electric vehicles
+    if gears == 1 or gears == 0 then
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
-    else -- normal cars
+    else
         for i = 0, (math.floor(memory.read_float(adr + 0x50) / 1e-45) - 1) do
             table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
         end
@@ -461,25 +459,7 @@ util.create_tick_handler(function()
     local veh = entities.get_user_vehicle_as_pointer()
     local curGear = entities.get_current_gear(veh)
     if curGear ~= oldGear then
-        if curGear == 0 then
-            setGearBoost(currentGears[1])
-        elseif curGear == 1 then
-            setGearBoost(currentGears[2])
-        elseif curGear == 2 then
-            setGearBoost(currentGears[3])
-        elseif curGear == 3 then
-            setGearBoost(currentGears[4])
-        elseif curGear == 4 then
-            setGearBoost(currentGears[5])
-        elseif curGear == 5 then
-            setGearBoost(currentGears[6])
-        elseif curGear == 6 then
-            setGearBoost(currentGears[7])
-        elseif curGear == 7 then
-            setGearBoost(currentGears[8])
-        elseif curGear == 8 then
-            setGearBoost(currentGears[9])
-        end
+        setGearBoost(currentGears[curGear + 1])
         oldGear = curGear
     end
 end)
@@ -3961,11 +3941,6 @@ function spawnVeh(cloneTune, temp)
 end
 
 function SetFlags(shutdown)
-    if HUD.GET_BLIP_FROM_ENTITY(get_user_car_id()) ~= 0 then
-        util.toast("Must rebuild construct to apply changes")
-        return
-    end
-
     local shutDownCheck = get_user_car_id()
     local veh = entities.get_user_vehicle_as_handle()
     local pers
@@ -3979,23 +3954,36 @@ function SetFlags(shutdown)
     end
     
     local flagClone = saveVeh(veh, true)
-    entities.delete_by_handle(veh)
-    
-    if pers then --fixing this gets mad during shutdown in pv
-        while entities.get_user_personal_vehicle_as_handle() == -1 do
+
+    if HUD.GET_BLIP_FROM_ENTITY(get_user_car_id()) ~= 0 then
+        menu.trigger_commands("constructorrebuild" .. get_user_car_id())
+        while onFoot() do
             util.yield_once()
         end
-        menu.trigger_commands("callpersonalvehicle")
         VEHICLE.SET_VEHICLE_ENGINE_ON(get_user_car_id(), true, true, false)
         entities.set_rpm(entities.handle_to_pointer(get_user_car_id()), flagClone.rpm)
         entities.set_current_gear(entities.handle_to_pointer(get_user_car_id()), flagClone.gear)
         ENTITY.SET_ENTITY_VELOCITY(get_user_car_id(), flagClone.vel.x, flagClone.vel.y, flagClone.vel.z)
         VEHICLE.SET_VEHICLE_FORWARD_SPEED(get_user_car_id(), flagClone.speed)
     else
-        if !shutdown then
-            spawnVeh(flagClone, true)
-        elseif shutdown and shutDownCheck ~= 0 then
-            spawnVeh(flagClone, true)
+        entities.delete_by_handle(veh)
+        
+        if pers then --fixing this gets mad during shutdown in pv
+            while entities.get_user_personal_vehicle_as_handle() == -1 do
+                util.yield_once()
+            end
+            menu.trigger_commands("callpersonalvehicle")
+            VEHICLE.SET_VEHICLE_ENGINE_ON(get_user_car_id(), true, true, false)
+            entities.set_rpm(entities.handle_to_pointer(get_user_car_id()), flagClone.rpm)
+            entities.set_current_gear(entities.handle_to_pointer(get_user_car_id()), flagClone.gear)
+            ENTITY.SET_ENTITY_VELOCITY(get_user_car_id(), flagClone.vel.x, flagClone.vel.y, flagClone.vel.z)
+            VEHICLE.SET_VEHICLE_FORWARD_SPEED(get_user_car_id(), flagClone.speed)
+        else
+            if !shutdown then
+                spawnVeh(flagClone, true)
+            elseif shutdown and shutDownCheck ~= 0 then
+                spawnVeh(flagClone, true)
+            end
         end
     end
 
@@ -4094,9 +4082,17 @@ function setNewVeh()
     refreshTunes()
 end
 
+local outOfVeh = false
+
 util.create_tick_handler(function()
     if !onFoot() and !loadingTune then
         if curVeh == VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user())) then
+            if outOfVeh == true then
+                refreshHandling()
+                util.yield(200)
+                acceleration(accelVal, boosties)
+                outOfVeh = false
+            end
             return
         end
         util.yield(500)
@@ -4105,6 +4101,8 @@ util.create_tick_handler(function()
             curVeh = VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user()))
             setNewVeh()
         end
+    elseif onFoot() and outOfVeh == false then
+        outOfVeh = true
     end
 end)
 
