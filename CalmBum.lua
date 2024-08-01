@@ -164,6 +164,7 @@ local clone = nil
 local nitroOpt
 local nitroHp
 local nitroTime
+local engineSwap = nil
 
 function resetHandling()
     for i = 1, table.getn(stockHandling) do
@@ -738,6 +739,9 @@ function saveTune(tuneFile)
     table.insert(tune.calmbum, {name = "BBG", hash = nil, value = bbg, gears = currentGears})
     table.insert(tune.calmbum, {name = "Nitro", hash = nil, value = {opt = menu.get_state(nitroOpt), time = menu.get_value(nitroTime), hp = menu.get_value(nitroHp)}})
     table.insert(tune.calmbum, {name = "Brake Mult", hash = nil, value = brakeMult})
+    if engineSwap ~= nil then
+        table.insert(tune.calmbum, {name = "Engine Swap", hash = nil, value = engineSwap})
+    end
 
     for i = 1, table.getn(handlingData) do
         if handlingData[i].special == true and subAdr ~= 0 then
@@ -813,7 +817,7 @@ function loadTune(tuneFile, withCar, loadAll)
         resetVeh()
         clone = tune.car
         setNewVeh()
-        AUDIO.SET_VEH_RADIO_STATION(get_user_car_id(), tune.car.radio)
+        AUDIO.SET_VEH_RADIO_STATION(get_user_car_id(), "OFF")
     end
 
     -- calmbum settings
@@ -904,6 +908,9 @@ function loadTune(tuneFile, withCar, loadAll)
             end
         elseif tune.calmbum[i].name == "Brake Mult" then
             menu.set_value(brakeMultOpt, tune.calmbum[i].value * -1)
+        elseif tune.calmbum[i].name == "Engine Swap" then
+            engineSwap = tune.calmbum[i].value
+            AUDIO.FORCE_USE_AUDIO_GAME_OBJECT(get_user_car_id(), engineSwap)
         end
     end
 
@@ -1987,7 +1994,6 @@ menu.toggle_loop(overlay, "Button Pressure Overlay" , {"pressureoverlaycb"}, "Gi
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
 -- oh shit button ----------------------------------------------------------------------------------------------------------------------------------------------
 
 local resettingCar = false
@@ -2050,6 +2056,24 @@ util.create_tick_handler(function()
 end)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+--------- engine swap ------------------------------------------------------------------------------------------------------------------------------------------
+menu.text_input(miscList, "Engine swap", {"engineswapcb"}, "Change the sound of your engine (locally)\nEnter the name of the vehicle you want to sound like\nThe name should appear the same as it does when spawning the vehicle through stand\nFor example: Dominator ASP should be written as dominator7", function(name, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+        return
+    end
+
+    local hash = util.joaat(name)
+    local check = util.reverse_joaat(hash)
+
+    if check == "" then
+        util.toast("Not a valid name")
+        engineSwap = nil
+    else
+        AUDIO.FORCE_USE_AUDIO_GAME_OBJECT(get_user_car_id(), name)
+        engineSwap = name
+    end
+end)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --------- flash high beams --------------------------------------------------------------------------------------------------------------------------------------
 menu.action(miscList, "Flash Highbeam", {"highbeamcb"}, "Press to flash your highbeams (recommend to bind to hotkey)", function()
@@ -3987,6 +4011,10 @@ function SetFlags(shutdown)
         end
     end
 
+    if engineSwap ~= nil then
+        AUDIO.FORCE_USE_AUDIO_GAME_OBJECT(get_user_car_id(), engineSwap)
+    end
+
     refreshHandling()
 
     -- remove all hard rev limit's because all it does is make me sad
@@ -4030,6 +4058,9 @@ function resetVeh()
         stockHandling[i] = nil
     end
     removeGears()
+    if engineSwap ~= nil then
+        engineSwap = nil
+    end
     adr = 0
     subAdr = 0
 end
@@ -4126,7 +4157,7 @@ util.on_pre_stop(function()
         menu.trigger_commands("fdlightcb off")
     end
 
-    if stockGears ~= nil then
+    if menu.get_value(gearSlider) ~= 0 then
         memory.write_float(adr + 0x50, stockGears)
         SetFlags(true)
     end
