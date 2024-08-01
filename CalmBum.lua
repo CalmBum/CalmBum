@@ -2008,6 +2008,69 @@ end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+-- oh shit button ----------------------------------------------------------------------------------------------------------------------------------------------
+
+local resettingCar = false
+local resetCheck = false
+
+menu.toggle(miscList, "Oh shit button", {"ohshitcb"}, "When enabled pressing B/Circle/R will make your car a ghost, useful when you are about to ruin a tandem :P\nThis will disable cinematic cam while on", function(on)
+    if on then
+        resetCheck = true
+        menu.trigger_commands("disablevehcincam On")
+    else
+        resetCheck = false
+        menu.trigger_commands("disablevehcincam Off")
+    end
+end)
+
+function getNearbyVehicles(ped, maxVehicles)
+	local vehicleList = memory.alloc((maxVehicles + 1) * 8)
+	memory.write_int(vehicleList, maxVehicles)
+	local vehiclesList = {}
+	for i = 1, PED.GET_PED_NEARBY_VEHICLES(ped, vehicleList) do
+		vehiclesList[i] = memory.read_int(vehicleList + i*8)
+	end
+	return vehiclesList
+end
+
+function resetCar()
+    resettingCar = true
+    NETWORK.SET_LOCAL_PLAYER_AS_GHOST(true, true)
+    util.yield(3000)
+    NETWORK.SET_LOCAL_PLAYER_AS_GHOST(false, true)
+    resettingCar = false
+end
+
+util.create_tick_handler(function()
+    if onFoot() then
+        return
+    end
+
+    if resetCheck then
+        if PAD.IS_DISABLED_CONTROL_JUST_PRESSED(80, 80) then
+            resetCar()
+        end
+    end
+end)
+
+util.create_tick_handler(function()
+    if onFoot() then
+        return
+    end
+    
+    if resettingCar then
+        local vehs = getNearbyVehicles(players.user_ped(), 30)
+        for vehs as veh do
+            if VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1, 0) ~= players.user_ped() then
+                CAM.SET_GAMEPLAY_CAM_IGNORE_ENTITY_COLLISION_THIS_UPDATE(get_user_car_id())
+                ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(veh, get_user_car_id(), true)
+            end
+        end
+    end
+end)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 --------- flash high beams --------------------------------------------------------------------------------------------------------------------------------------
 menu.action(miscList, "Flash Highbeam", {"highbeamcb"}, "Press to flash your highbeams (recommend to bind to hotkey)", function()
     local veh = get_user_car_id()
