@@ -1244,6 +1244,7 @@ local transList = menu.list(tuningList, "Transmission Stuff")
 local enableClutch = false
 local ebrakeClutch = false
 local clutchKickForce = 50
+local clutchIn = false
 
 function clutchKick(percent)
     if clutchKickForce == 0 then
@@ -1281,6 +1282,7 @@ util.create_tick_handler(function()
         PLAYER.SET_PLAYER_CAN_DO_DRIVE_BY(players.user(), false)
 
         if PAD.IS_CONTROL_PRESSED(68, 68) then
+            clutchIn = true
             if PAD.IS_CONTROL_PRESSED(76, 76) then
                 VEHICLE.SET_VEHICLE_HANDBRAKE(get_user_car_id(), true)
             else
@@ -1297,6 +1299,7 @@ util.create_tick_handler(function()
         end
 
         if PAD.IS_CONTROL_JUST_RELEASED(68, 68) then
+            clutchIn = false
             memory.write_int(adr + 0x128, ClearBit(memory.read_int(adr + 0x128), 1 << 8))
             if PAD.GET_CONTROL_NORMAL(71, 71) > 0.5 then
                 entities.set_rpm(veh, PAD.GET_CONTROL_NORMAL(71, 71))
@@ -1306,6 +1309,7 @@ util.create_tick_handler(function()
     end
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 --Smooth shifting------------------------------------------------------------------------------------------------------------------------------------------------
 menu.toggle_loop(transList, "Smooth shifting", {"smoothshiftcb"}, "Prevents the car from gripping up when shifting\nCan be helpful when drifting\nSometimes feels absolutely awful :)", function()
@@ -1323,6 +1327,71 @@ menu.toggle_loop(transList, "Smooth shifting", {"smoothshiftcb"}, "Prevents the 
     end
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+-- Better backies (mostly stop brakes being applied when on throttle moving backwards) -------------------------------------------------------------------------
+local oldSpeed = nil
+local stopIt = false
+local clutchStop = false
+local brakeForceTemp = nil
+
+menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled your car will not apply the brakes when on throttle while moving backwards.\nThis makes backies somewhat more achievable.", function()
+    if onFoot() then
+        if brakeForceTemp ~= nil then
+            brakeForceTemp = nil
+        end
+        return
+    end
+
+    local veh = get_user_car_id()
+    local veh2 = entities.get_user_vehicle_as_pointer()
+
+    if brakeForceTemp == nil then
+        brakeForceTemp = memory.read_float(adr + 0x6C)
+    end
+
+    if oldSpeed == nil then
+        oldSpeed = ENTITY.GET_ENTITY_SPEED_VECTOR(veh, true).Y
+    end
+
+    local speed = ENTITY.GET_ENTITY_SPEED_VECTOR(veh, true).Y
+
+    -- brake takes priority
+    if !PAD.IS_CONTROL_PRESSED(72, 72) and PAD.IS_CONTROL_PRESSED(71, 71) and speed < -1 and speed > oldSpeed then
+        if !clutchIn then
+            if clutchStop then
+                memory.write_float(adr + 0x6C, brakeForceTemp)
+                clutchStop = false
+            end
+            entities.set_current_gear(veh2, 1)
+            entities.set_next_gear(veh2, 1)
+            entities.set_rpm(veh2, 1)
+            VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(veh, torqueMult + 200)
+            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, 10, 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
+            PAD.SET_CONTROL_VALUE_NEXT_FRAME(72, 72, 1)
+        else
+            clutchStop = true
+            entities.set_current_gear(veh2, 1)
+            entities.set_next_gear(veh2, 1)
+            entities.set_rpm(veh2, 1)
+            memory.write_float(adr + 0x6C, 0)
+        end
+        stopIt = true
+    elseif speed > -1 and stopIt then
+        if clutchStop then
+            memory.write_float(adr + 0x6C, brakeForceTemp)
+            clutchStop = false
+        end
+        stopIt = false
+    end
+
+    oldSpeed = speed
+
+end, function()
+    oldSpeed = nil
+end)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 --Drift Cam Assist------------------------------------------------------------------------------------------------------------------------------------------------
 menu.toggle_loop(tuningList, "Drift Cam Assist", {"driftcamcb"}, "Prevents the camera from going crazy every time you tap ebrake", function()
@@ -2971,12 +3040,6 @@ function addPlayer(pIdOn)
         end
 	end)
 
-    menu.toggle_loop(menu.player_root(pIdOn), "Show gears", {"gears "}, "", function()
-        local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
-        local veh = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-        util.toast(entities.get_current_gear(entities.handle_to_pointer(veh)))
-    end)
-
     --Attach to player vehicle--
     menu.divider(atpList, "Attach to player vehicle")
     local position = 1
@@ -4240,10 +4303,6 @@ if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
         util.yield(2)
     end
 end
-
--- load inital tunes
-util.yield(1000)
-refreshTunes()
 
 -- idk keeps stuff running?
 util.keep_running()
