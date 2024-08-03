@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.0.5"
+local SCRIPT_VERSION = "7.0.7"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -1367,8 +1367,8 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
             entities.set_next_gear(veh2, 1)
             entities.set_rpm(veh2, 1)
             VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(veh, torqueMult + 200)
-            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, 10, 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
-            PAD.SET_CONTROL_VALUE_NEXT_FRAME(72, 72, 1)
+            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, 75, 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
+            PAD.SET_CONTROL_VALUE_NEXT_FRAME(72, 72, 0.75)
         else
             clutchStop = true
             entities.set_current_gear(veh2, 1)
