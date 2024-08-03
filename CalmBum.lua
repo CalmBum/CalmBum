@@ -499,6 +499,25 @@ end)
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+--------- engine swap ------------------------------------------------------------------------------------------------------------------------------------------
+menu.text_input(tuneList, "Engine swap", {"engineswapcb"}, "This changes the sound (locally) and handling of your car, handling differences can be very subtle\nEnter the name of the vehicle you want to sound like\nThe name should appear the same as it does when spawning the vehicle through stand\nFor example: Dominator ASP should be written as dominator7", function(name, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+        return
+    end
+
+    local hash = util.joaat(name)
+    local check = util.reverse_joaat(hash)
+
+    if check == "" then
+        util.toast("Not a valid name")
+        engineSwap = nil
+    else
+        AUDIO.FORCE_USE_AUDIO_GAME_OBJECT(get_user_car_id(), name)
+        engineSwap = name
+    end
+end)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ------------------ drive bias ----------------------------------------------------------------------------------------------------------------------------------------------
 
 local driveBias = -1
@@ -2033,7 +2052,7 @@ util.create_tick_handler(function()
     end
 
     if resetCheck then
-        if PAD.IS_DISABLED_CONTROL_JUST_PRESSED(80, 80) then
+        if !HUD.IS_MP_TEXT_CHAT_TYPING() and PAD.IS_DISABLED_CONTROL_JUST_PRESSED(80, 80) then
             resetCar()
         end
     end
@@ -2055,25 +2074,6 @@ util.create_tick_handler(function()
     end
 end)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
---------- engine swap ------------------------------------------------------------------------------------------------------------------------------------------
-menu.text_input(miscList, "Engine swap", {"engineswapcb"}, "Change the sound of your engine (locally)\nEnter the name of the vehicle you want to sound like\nThe name should appear the same as it does when spawning the vehicle through stand\nFor example: Dominator ASP should be written as dominator7", function(name, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
-        return
-    end
-
-    local hash = util.joaat(name)
-    local check = util.reverse_joaat(hash)
-
-    if check == "" then
-        util.toast("Not a valid name")
-        engineSwap = nil
-    else
-        AUDIO.FORCE_USE_AUDIO_GAME_OBJECT(get_user_car_id(), name)
-        engineSwap = name
-    end
-end)
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --------- flash high beams --------------------------------------------------------------------------------------------------------------------------------------
 menu.action(miscList, "Flash Highbeam", {"highbeamcb"}, "Press to flash your highbeams (recommend to bind to hotkey)", function()
