@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.0.0"
+local SCRIPT_VERSION = "7.0.5"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -2872,9 +2872,16 @@ end)
 
 --No Traffic------------------------------------------------------------------------------------------------------------------------------------------------------
 
-menu.toggle_loop(trafficList, "No Traffic", {"notrafficcb"}, "Disables all traffic and pedestrians", function()
+menu.toggle_loop(trafficList, "No Traffic (session)", {"notrafficcb"}, "Disables all traffic and pedestrians session wide", function()
     MISC.CLEAR_AREA_OF_VEHICLES(1.1, 1.1, 1.1, 19999.9, false, false, false, false, true, false, 0) -- 5th bool true to work properly
     MISC.CLEAR_AREA_OF_PEDS(1.1, 1.1, 1.1, 19999.9, 1)
+    util.yield_once()
+end)
+
+menu.toggle_loop(trafficList, "No Traffic (near you)", {"notrafficnearcb"}, "Disables all traffic and pedestrians near you so distant traffic enjoyers can still be happy", function()
+    local pos = players.get_position(players.user())
+    MISC.CLEAR_AREA_OF_VEHICLES(pos.x, pos.y, pos.z, 200, false, false, false, false, true, false, 0)
+    MISC.CLEAR_AREA_OF_PEDS(pos.x, pos.y, pos.z, 200, 1)
     util.yield_once()
 end)
 
