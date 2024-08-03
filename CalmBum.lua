@@ -4299,6 +4299,11 @@ if SCRIPT_MANUAL_START and not SCRIPT_SILENT_START then
     end
 end
 
+util.yield(1000)
+if onFoot() then
+    refreshTunes()
+end
+
 -- idk keeps stuff running?
 util.keep_running()
 
