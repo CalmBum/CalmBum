@@ -1285,6 +1285,8 @@ util.create_tick_handler(function()
             clutchIn = true
             if PAD.IS_CONTROL_PRESSED(76, 76) then
                 VEHICLE.SET_VEHICLE_HANDBRAKE(get_user_car_id(), true)
+            elseif PAD.IS_CONTROL_PRESSED(72, 72) and ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true).Y < 0 then
+                VEHICLE.SET_VEHICLE_HANDBRAKE(get_user_car_id(), true)
             else
                 memory.write_int(adr + 0x128, SetBit(memory.read_int(adr + 0x128), 1 << 8))
                 VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(get_user_car_id(), 0)
@@ -1294,7 +1296,7 @@ util.create_tick_handler(function()
             end
         end
 
-        if PAD.IS_CONTROL_JUST_RELEASED(76, 76) then
+        if PAD.IS_CONTROL_JUST_RELEASED(76, 76) or (PAD.IS_CONTROL_JUST_RELEASED(72, 72) and ENTITY.GET_ENTITY_SPEED_VECTOR(veh, true).Y <= 0) then
             VEHICLE.SET_VEHICLE_HANDBRAKE(get_user_car_id(), false)
         end
 
@@ -1305,6 +1307,7 @@ util.create_tick_handler(function()
                 entities.set_rpm(veh, PAD.GET_CONTROL_NORMAL(71, 71))
                 clutchKick(PAD.GET_CONTROL_NORMAL(71, 71))
             end
+            VEHICLE.SET_VEHICLE_HANDBRAKE(get_user_car_id(), false)
         end
     end
 end)
@@ -1356,7 +1359,6 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
 
     local speed = ENTITY.GET_ENTITY_SPEED_VECTOR(veh, true).Y
 
-    -- brake takes priority
     if !PAD.IS_CONTROL_PRESSED(72, 72) and PAD.IS_CONTROL_PRESSED(71, 71) and speed < -1 and speed > oldSpeed then
         if !clutchIn then
             if clutchStop then
