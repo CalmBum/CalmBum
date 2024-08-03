@@ -2880,8 +2880,8 @@ end)
 
 menu.toggle_loop(trafficList, "No Traffic (near you)", {"notrafficnearcb"}, "Disables all traffic and pedestrians near you so distant traffic enjoyers can still be happy", function()
     local pos = players.get_position(players.user())
-    MISC.CLEAR_AREA_OF_VEHICLES(pos.x, pos.y, pos.z, 200, false, false, false, false, true, false, 0)
-    MISC.CLEAR_AREA_OF_PEDS(pos.x, pos.y, pos.z, 200, 1)
+    MISC.CLEAR_AREA_OF_VEHICLES(pos.x, pos.y, pos.z, 500, false, false, false, false, true, false, 0)
+    MISC.CLEAR_AREA_OF_PEDS(pos.x, pos.y, pos.z, 500, 1)
     util.yield_once()
 end)
 
