@@ -1333,12 +1333,11 @@ end)
 
 
 -- Better backies (mostly stop brakes being applied when on throttle moving backwards) -------------------------------------------------------------------------
-local oldSpeed = nil
 local stopIt = false
 local clutchStop = false
 local brakeForceTemp = nil
 
-menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled your car will not apply the brakes when on throttle while moving backwards.\nThis makes backies somewhat more achievable.", function()
+menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled your car will not apply the brakes when on throttle while moving backwards.\nThis makes backies somewhat more achievable.\nRecommend using with clutch for most control.", function()
     if onFoot() then
         if brakeForceTemp ~= nil then
             brakeForceTemp = nil
@@ -1350,16 +1349,15 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
     local veh2 = entities.get_user_vehicle_as_pointer()
 
     if brakeForceTemp == nil then
+        while adr == 0 do
+            util.yield_once()
+        end
         brakeForceTemp = memory.read_float(adr + 0x6C)
-    end
-
-    if oldSpeed == nil then
-        oldSpeed = ENTITY.GET_ENTITY_SPEED_VECTOR(veh, true).Y
     end
 
     local speed = ENTITY.GET_ENTITY_SPEED_VECTOR(veh, true).Y
 
-    if !PAD.IS_CONTROL_PRESSED(72, 72) and PAD.IS_CONTROL_PRESSED(71, 71) and speed < -1 and speed > oldSpeed then
+    if !PAD.IS_CONTROL_PRESSED(72, 72) and PAD.IS_CONTROL_PRESSED(71, 71) and speed < 0 then
         if !clutchIn then
             if clutchStop then
                 memory.write_float(adr + 0x6C, brakeForceTemp)
@@ -1369,7 +1367,7 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
             entities.set_next_gear(veh2, 1)
             entities.set_rpm(veh2, 1)
             VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(veh, torqueMult + 200)
-            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, (PAD.GET_CONTROL_NORMAL(71, 71) * 20) + (speed * -1.5), 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
+            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, (PAD.GET_CONTROL_NORMAL(71, 71) * 20) + (speed * -1), 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
             PAD.SET_CONTROL_VALUE_NEXT_FRAME(72, 72, 0.75)
         else
             clutchStop = true
@@ -1379,18 +1377,13 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
             memory.write_float(adr + 0x6C, 0)
         end
         stopIt = true
-    elseif speed > -1 and stopIt then
+    elseif speed > 0 and stopIt then
         if clutchStop then
             memory.write_float(adr + 0x6C, brakeForceTemp)
             clutchStop = false
         end
         stopIt = false
     end
-
-    oldSpeed = speed
-
-end, function()
-    oldSpeed = nil
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
