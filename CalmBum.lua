@@ -1367,7 +1367,7 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
             entities.set_next_gear(veh2, 1)
             entities.set_rpm(veh2, 1)
             VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(veh, torqueMult + 200)
-            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, 75, 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
+            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, (PAD.GET_CONTROL_NORMAL(71, 71) * 20) + (speed * -1.5), 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
             PAD.SET_CONTROL_VALUE_NEXT_FRAME(72, 72, 0.75)
         else
             clutchStop = true
