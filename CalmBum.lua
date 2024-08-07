@@ -11,11 +11,12 @@
 
 -- Loads native functions--
 util.require_natives("3095a")
+util.require_natives("2944b", "g")
 local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.0.7"
+local SCRIPT_VERSION = "7.1"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -1367,7 +1368,7 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
             entities.set_next_gear(veh2, 1)
             entities.set_rpm(veh2, 1)
             VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(veh, torqueMult + 200)
-            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, (PAD.GET_CONTROL_NORMAL(71, 71) * 20) + (speed * -1), 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
+            --ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, (PAD.GET_CONTROL_NORMAL(71, 71) * 10) + (speed * -1), 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)--
             PAD.SET_CONTROL_VALUE_NEXT_FRAME(72, 72, 0.75)
         else
             clutchStop = true
@@ -2933,6 +2934,28 @@ menu.action(fireworksMenu, "Play Fireworks", {}, "", function()
     end
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+--Floating Island------------------------------------------------------------------------------------------------------------------------------------------
+
+
+island_block = 0
+menu.action(worldList, "Sky Island", {""},"Sky Island", function(click_type)
+    local c = {}
+    c.x = 0
+    c.y = 0
+    c.z = 500
+    SET_PED_COORDS_KEEP_VEHICLE(players.user_ped(), c.x, c.y, c.z+5)
+    if island_block == 0 or not DOES_ENTITY_EXIST(island_block) then
+        util.request_model(1054678467, 2000)
+        island_block = entities.create_object(1054678467, c)
+    end
+end)
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 
 --No Traffic------------------------------------------------------------------------------------------------------------------------------------------------------
 
