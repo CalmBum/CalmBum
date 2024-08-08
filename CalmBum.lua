@@ -11,12 +11,11 @@
 
 -- Loads native functions--
 util.require_natives("3095a")
-util.require_natives("2944b", "g")
 local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2"
+local SCRIPT_VERSION = "7.2.1"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -166,6 +165,7 @@ local nitroOpt
 local nitroHp
 local nitroTime
 local engineSwap = nil
+local clutchIn = false
 
 function resetHandling()
     for i = 1, table.getn(stockHandling) do
@@ -296,7 +296,7 @@ local brakeMultOpt = menu.slider(powerList, "Brake/Reverse Multiplier", {"brakem
 end)
 
 util.create_tick_handler(function()
-    if onFoot() then
+    if onFoot() or clutchIn then
         return
     end
     if PAD.IS_CONTROL_PRESSED(72, 72) and brakeMult ~= 0 and VEHICLE.IS_VEHICLE_ON_ALL_WHEELS(get_user_car_id()) then
@@ -465,7 +465,6 @@ util.create_tick_handler(function()
         oldGear = curGear
     end
 end)
-
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Nitros ---------------------------------------------------------------------------------------------------------------------------------------------
@@ -524,7 +523,7 @@ end)
 local driveBias = -1
 
 local driveBiasSlider = menu.slider_float(tuneList, "Drive Bias", {"drivebiascb"}, "0 = RWD\n1 = FWD\nTHIS WILL RESPAWN YOUR CAR\nFor constructs, you will need to respawn the construct after having applied the bias", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         return
     end
 
@@ -560,7 +559,7 @@ end)
 local stockGears = nil
 
 gearSlider = menu.slider(tuneList, "Gears", {"setgearscb"}, "Set number of gears your car has (roughly)\nCertain changes will respawn your car in order to apply\nSet to 0 for stock\nRecommend setting to 1 for CVT", 0, 8, 0, 1, function(num, prev_val, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         return
     end
 
@@ -579,7 +578,6 @@ gearSlider = menu.slider(tuneList, "Gears", {"setgearscb"}, "Set number of gears
     getCurrentGears()
     gearList()
 end)
-
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --------------------- CVT -----------------------------------------------------------------------------------------------------------------------------------------------
@@ -986,7 +984,7 @@ function loadTune(tuneFile, withCar, loadAll)
         if withCar then
             util.yield(500)
             SetFlags()
-        else
+        elseif NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
             SetFlags()
         end
     end
@@ -1245,7 +1243,6 @@ local transList = menu.list(tuningList, "Transmission Stuff")
 local enableClutch = false
 local ebrakeClutch = false
 local clutchKickForce = 50
-local clutchIn = false
 
 function clutchKick(percent)
     if clutchKickForce == 0 then
@@ -1273,8 +1270,10 @@ menu.slider(transList, "Clutch kick power", {"clutchkickpowercb"}, 'Set how much
     clutchKickForce = val
 end)
 
+local clutchBrake = false
+
 util.create_tick_handler(function()
-    if onFoot() then
+    if onFoot() or adr == 0 or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         return
     end
 
@@ -1287,6 +1286,7 @@ util.create_tick_handler(function()
             if PAD.IS_CONTROL_PRESSED(76, 76) then
                 VEHICLE.SET_VEHICLE_HANDBRAKE(get_user_car_id(), true)
             elseif PAD.IS_CONTROL_PRESSED(72, 72) and ENTITY.GET_ENTITY_SPEED_VECTOR(get_user_car_id(), true).Y < 0 then
+                clutchBrake = true
                 VEHICLE.SET_VEHICLE_HANDBRAKE(get_user_car_id(), true)
             else
                 memory.write_int(adr + 0x128, SetBit(memory.read_int(adr + 0x128), 1 << 8))
@@ -1297,8 +1297,9 @@ util.create_tick_handler(function()
             end
         end
 
-        if PAD.IS_CONTROL_JUST_RELEASED(76, 76) or (PAD.IS_CONTROL_JUST_RELEASED(72, 72) and ENTITY.GET_ENTITY_SPEED_VECTOR(veh, true).Y <= 0) then
+        if PAD.IS_CONTROL_JUST_RELEASED(76, 76) or (PAD.IS_CONTROL_JUST_RELEASED(72, 72) and clutchBrake) then
             VEHICLE.SET_VEHICLE_HANDBRAKE(get_user_car_id(), false)
+            clutchBrake = false
         end
 
         if PAD.IS_CONTROL_JUST_RELEASED(68, 68) then
@@ -1358,7 +1359,7 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
 
     local speed = ENTITY.GET_ENTITY_SPEED_VECTOR(veh, true).Y
 
-    if !PAD.IS_CONTROL_PRESSED(72, 72) and PAD.IS_CONTROL_PRESSED(71, 71) and speed < 0 then
+    if !PAD.IS_CONTROL_PRESSED(72, 72) and PAD.IS_CONTROL_PRESSED(71, 71) and speed < -1 then
         if !clutchIn then
             if clutchStop then
                 memory.write_float(adr + 0x6C, brakeForceTemp)
@@ -1368,7 +1369,7 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
             entities.set_next_gear(veh2, 1)
             entities.set_rpm(veh2, 1)
             VEHICLE.SET_VEHICLE_CHEAT_POWER_INCREASE(veh, torqueMult + 200)
-            --ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, (PAD.GET_CONTROL_NORMAL(71, 71) * 10) + (speed * -1), 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)--
+            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 1, 1, 1, 0, 1)
             PAD.SET_CONTROL_VALUE_NEXT_FRAME(72, 72, 0.75)
         else
             clutchStop = true
@@ -2643,7 +2644,6 @@ end)
 -----------------------------------
 
 --Loud Radio----------------------------------------------------------------------------------------------------------------------------------------
-
 local lradio = menu.list(worldList, "Loud Radio")
 
 menu.toggle(lradio, "Enable loud radio", {"loudradiocb"}, "Enables loud radio (like lowriders have) on your current vehicle.", function(on)
@@ -2771,31 +2771,31 @@ end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 --Custom Radio----------------------------------------------------------------------------------------------------------------------------------------
-
-local music ={
-    sleepwalking = "Sleepwalking",
-    dont_come_close = "Don't Come Close",
-    thesetup = "The Setup",
-    custom_radio = "Custom Radio"
+local music = {
+    sleepWalking = "Sleepwalking",
+    dontComeClose = "Don't Come Close",
+    theSetup = "The Setup",
+    customRadio = "Custom Radio"
 }
 
-local custom_radio_options = {music.sleepwalking, music.dont_come_close, music.thesetup}
+local customRadioOptions = {music.sleepWalking, music.dontComeClose, music.theSetup}
 
-menu.list_action(lradio, music.custom_radio, {""}, "", custom_radio_options, function(index, value, click_type)
+menu.list_action(lradio, music.custom_radio, {""}, "", customRadioOptions, function(index)
     local station = "RADIO_16_SILVERLAKE"
-    SET_RADIO_TO_STATION_NAME(station)
-    switch index do 
-        case 1: 
-            SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_KILL_MICHAEL", true)
+    AUDIO.SET_RADIO_TO_STATION_NAME(station)
+    switch index do
+        case 1:
+            AUDIO.SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_KILL_MICHAEL", true)
             break 
         case 2:
-            SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_KILL_TREVOR", true)
+            AUDIO.SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_KILL_TREVOR", true)
             break
         case 3:
-            SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_SAVE_MICHAEL_TREVOR", true)
+            AUDIO.SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_SAVE_MICHAEL_TREVOR", true)
+            break
     end
 end)
-
+----------------------------------------------------------------------------------------------------------------------------------------------------
 
 --Aesthetify----------------------------------------------------------------------------------------------------------------------------------------
 menu.toggle(worldList, "Aesthetify", {"aesthetifycb"}, "Whooaa I think there was something in that hippie I just ate... my hands are huuuuge", function(on)
@@ -2961,28 +2961,6 @@ menu.action(fireworksMenu, "Play Fireworks", {}, "", function()
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
---Floating Island------------------------------------------------------------------------------------------------------------------------------------------
-
-
-island_block = 0
-menu.action(worldList, "Sky Island", {""},"Sky Island", function(click_type)
-    local c = {}
-    c.x = 0
-    c.y = 0
-    c.z = 500
-    SET_PED_COORDS_KEEP_VEHICLE(players.user_ped(), c.x, c.y, c.z+5)
-    if island_block == 0 or not DOES_ENTITY_EXIST(island_block) then
-        util.request_model(1054678467, 2000)
-        island_block = entities.create_object(1054678467, c)
-    end
-end)
-
-
--------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
 --No Traffic------------------------------------------------------------------------------------------------------------------------------------------------------
 
 menu.toggle_loop(trafficList, "No Traffic (session)", {"notrafficcb"}, "Disables all traffic and pedestrians session wide", function()
@@ -3062,7 +3040,7 @@ function addPlayer(pIdOn)
     local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
     local atpList = menu.list(rList, "Attach To Player")
 
-    menu.text_input(menu.player_root(pIdOn), "Remote Boosties", {"boost "}, "", function(speed, click)
+    menu.text_input(menu.player_root(pIdOn), "Remote Boosties", {"boostcb "}, "", function(speed, click)
         if (click & CLICK_FLAG_AUTO) ~= 0 then
             return
         end
@@ -4007,6 +3985,8 @@ function saveVeh(veh, temp)
     if VEHICLE.IS_THIS_MODEL_A_BIKE(cloneTune.hash) then
         cloneTune.wheelvar2 = VEHICLE.GET_VEHICLE_MOD_VARIATION(veh, 24)
     end
+    cloneTune.bulletproof = VEHICLE.GET_VEHICLE_TYRES_CAN_BURST(veh)
+    cloneTune.drifttires = VEHICLE.GET_DRIFT_TYRES_SET(veh)
     return cloneTune
 end
 
@@ -4018,10 +3998,10 @@ function spawnVeh(cloneTune, temp)
         util.yield_once()
     end
     if temp then
-        cloneVeh = VEHICLE.CREATE_VEHICLE(veh, cloneTune.coord.x, cloneTune.coord.y, cloneTune.coord.z, ENTITY.GET_ENTITY_HEADING(players.user_ped()), 1, 1, 0)
+        cloneVeh = VEHICLE.CREATE_VEHICLE(veh, cloneTune.coord.x, cloneTune.coord.y, cloneTune.coord.z, ENTITY.GET_ENTITY_HEADING(players.user_ped()), 1, 0, 0)
     else
         local pos = players.get_position(players.user())
-        cloneVeh = VEHICLE.CREATE_VEHICLE(veh, pos.x, pos.y, pos.z, ENTITY.GET_ENTITY_HEADING(players.user_ped()), 1, 1, 0)
+        cloneVeh = VEHICLE.CREATE_VEHICLE(veh, pos.x, pos.y, pos.z, ENTITY.GET_ENTITY_HEADING(players.user_ped()), 1, 0, 0)
     end
     VEHICLE.SET_VEHICLE_MOD_KIT(cloneVeh, 0)
     PED.SET_PED_INTO_VEHICLE(players.user_ped(), cloneVeh, -1)
@@ -4067,6 +4047,13 @@ function spawnVeh(cloneTune, temp)
     VEHICLE.SET_VEHICLE_LIVERY(cloneVeh, cloneTune.livery)
     VEHICLE.SET_VEHICLE_LIVERY2(cloneVeh, cloneTune.livery2)
     VEHICLE.SET_VEHICLE_DIRT_LEVEL(cloneVeh, 0)
+    if cloneTune.bulletproof ~= nil then
+        VEHICLE.SET_VEHICLE_TYRES_CAN_BURST(cloneVeh, cloneTune.bulletproof)
+    end
+    if cloneTune.drifttires ~= nil then
+        VEHICLE.SET_DRIFT_TYRES(cloneVeh, cloneTune.drifttires)
+    end
+    VEHICLE.SET_VEHICLE_HAS_BEEN_OWNED_BY_PLAYER(cloneVeh, true)
 
     if temp then
         entities.set_rpm(entities.handle_to_pointer(cloneVeh), cloneTune.rpm)
