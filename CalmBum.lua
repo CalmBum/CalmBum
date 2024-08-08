@@ -172,12 +172,12 @@ function resetHandling()
         if stockHandling[i].special ~= nil and subAdr ~= 0 then
             if memory.read_float(subAdr + stockHandling[i].hash) ~= stockHandling[i].value then
                 memory.write_float(subAdr + stockHandling[i].hash, stockHandling[i].value)
-                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 100) + 0.5))
+                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5))
             end
         else
             if memory.read_float(adr + stockHandling[i].hash) ~= stockHandling[i].value then
                 memory.write_float(adr + stockHandling[i].hash, stockHandling[i].value)
-                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 100) + 0.5))
+                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5))
             end
         end
     end
@@ -187,11 +187,11 @@ function refreshHandling()
     for i = 1, table.getn(stockHandling) do
         if stockHandling[i].special ~= nil and subAdr ~= 0 then
             if memory.read_float(subAdr + stockHandling[i].hash) ~= stockHandling[i].value then
-                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", memory.read_float(subAdr + stockHandling[i].hash))) * 100) + 0.5))
+                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", memory.read_float(subAdr + stockHandling[i].hash))) * 1000) + 0.5))
             end
         else
             if memory.read_float(adr + stockHandling[i].hash) ~= stockHandling[i].value then
-                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", memory.read_float(adr + stockHandling[i].hash))) * 100) + 0.5))
+                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", memory.read_float(adr + stockHandling[i].hash))) * 1000) + 0.5))
             end
         end
     end
@@ -215,31 +215,32 @@ function handlingMenu()
             if stockHandling[i].special ~= nil and subAdr ~= 0 then
                 if memory.read_float(subAdr + stockHandling[i].hash) ~= stockHandling[i].value then
                     memory.write_float(subAdr + stockHandling[i].hash, stockHandling[i].value)
-                    menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 100) + 0.5))
+                    menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5))
                 end
             else
                 if memory.read_float(adr + stockHandling[i].hash) ~= stockHandling[i].value then
                     memory.write_float(adr + stockHandling[i].hash, stockHandling[i].value)
-                    menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 100) + 0.5))
+                    menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5))
                 end
             end
         end
     end)
     
     for i = 1, table.getn(stockHandling) do
-        local temp = menu.slider_float(handlingMenuList, stockHandling[i].name, {stockHandling[i].name .. " "}, "", -1000000, 1000000, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 100) + 0.5), 10, function(num, prev_val, click)
+        local temp = menu.slider_float(handlingMenuList, stockHandling[i].name, {stockHandling[i].name .. " "}, "", -1000000, 1000000, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5), 100, function(num, prev_val, click)
             if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
                 return
             end
             if num ~= prev_val then
                 if stockHandling[i].special ~= nil and subAdr ~= 0 then
-                    memory.write_float(subAdr + stockHandling[i].hash, num/100)
+                    memory.write_float(subAdr + stockHandling[i].hash, num/1000)
                 else
-                    memory.write_float(adr + stockHandling[i].hash, num/100)
+                    memory.write_float(adr + stockHandling[i].hash, num/1000)
                 end
             end
         end)
         table.insert(handlingRefs, {name = stockHandling[i].name, ref = temp})
+        menu.set_precision(temp, 3)
     end
     table.insert(handlingRefs, {name = "reset", ref = reset})
 end
@@ -953,7 +954,7 @@ function loadTune(tuneFile, withCar, loadAll)
                 end
                 for handlingRefs as n do
                     if n.name == tune.handling[i].name then
-                        menu.set_value(n.ref, math.floor((tonumber(string.format("%.6f", tune.handling[i].value)) * 100) + 0.5))
+                        menu.set_value(n.ref, math.floor((tonumber(string.format("%.6f", tune.handling[i].value)) * 1000) + 0.5))
                     end
                 end
             end
@@ -965,7 +966,7 @@ function loadTune(tuneFile, withCar, loadAll)
             end
             for handlingRefs as n do
                 if n.name == tune.handling[i].name then
-                    menu.set_value(n.ref, math.floor((tonumber(string.format("%.6f", tune.handling[i].value)) * 100) + 0.5))
+                    menu.set_value(n.ref, math.floor((tonumber(string.format("%.6f", tune.handling[i].value)) * 1000) + 0.5))
                 end
             end
         end
