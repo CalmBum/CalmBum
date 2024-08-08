@@ -763,14 +763,14 @@ function saveTune(tuneFile)
 
     for i = 1, table.getn(handlingData) do
         if handlingData[i].special == true and subAdr ~= 0 then
-            if math.abs(memory.read_float(subAdr + handlingData[i].hash) - stockHandling[i].value) < 0.01 then
+            if math.abs(memory.read_float(subAdr + handlingData[i].hash) - stockHandling[i].value) < 0.001 then
                 table.insert(tune.handling, {name = handlingData[i].name, hash = handlingData[i].hash, value = stockHandling[i].value})
             else
                 table.insert(tune.handling, {name = handlingData[i].name, hash = handlingData[i].hash, value = memory.read_float(subAdr + handlingData[i].hash), original = stockHandling[i].value, changed = true})
                 changes += 1
             end
         else
-            if math.abs(memory.read_float(adr + handlingData[i].hash) - stockHandling[i].value) < 0.01 then
+            if math.abs(memory.read_float(adr + handlingData[i].hash) - stockHandling[i].value) < 0.001 then
                 table.insert(tune.handling, {name = handlingData[i].name, hash = handlingData[i].hash, value = stockHandling[i].value})
             else
                 table.insert(tune.handling, {name = handlingData[i].name, hash = handlingData[i].hash, value = memory.read_float(adr + handlingData[i].hash), original = stockHandling[i].value, changed = true})
