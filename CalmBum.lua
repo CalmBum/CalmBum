@@ -2780,7 +2780,7 @@ local music = {
 
 local customRadioOptions = {music.sleepWalking, music.dontComeClose, music.theSetup}
 
-menu.list_action(lradio, music.custom_radio, {""}, "", customRadioOptions, function(index)
+menu.list_action(lradio, music.customRadio, {""}, "", customRadioOptions, function(index)
     local station = "RADIO_16_SILVERLAKE"
     AUDIO.SET_RADIO_TO_STATION_NAME(station)
     switch index do
