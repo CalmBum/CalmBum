@@ -16,7 +16,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.1"
+local SCRIPT_VERSION = "7.2"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -2769,6 +2769,32 @@ end, function()
     end
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Custom Radio----------------------------------------------------------------------------------------------------------------------------------------
+
+local music ={
+    sleepwalking = "Sleepwalking",
+    dont_come_close = "Don't Come Close",
+    thesetup = "The Setup",
+    custom_radio = "Custom Radio"
+}
+
+local custom_radio_options = {music.sleepwalking, music.dont_come_close, music.thesetup}
+
+menu.list_action(lradio, music.custom_radio, {""}, "", custom_radio_options, function(index, value, click_type)
+    local station = "RADIO_16_SILVERLAKE"
+    SET_RADIO_TO_STATION_NAME(station)
+    switch index do 
+        case 1: 
+            SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_KILL_MICHAEL", true)
+            break 
+        case 2:
+            SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_KILL_TREVOR", true)
+            break
+        case 3:
+            SET_CUSTOM_RADIO_TRACK_LIST(station, "END_CREDITS_SAVE_MICHAEL_TREVOR", true)
+    end
+end)
 
 
 --Aesthetify----------------------------------------------------------------------------------------------------------------------------------------
