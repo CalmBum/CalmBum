@@ -2990,7 +2990,7 @@ menu.action(worldList, "Sky Island", {""},"Sky Island", function(click_type)
     c.x = 0
     c.y = 0
     c.z = 500
-    SET_PED_COORDS_KEEP_VEHICLE(players.user_ped(), c.x, c.y, c.z+5)
+    PED.SET_PED_COORDS_KEEP_VEHICLE(players.user_ped(), c.x, c.y, c.z+5)
     if island_block == 0 or not DOES_ENTITY_EXIST(island_block) then
         util.request_model(1054678467, 2000)
         island_block = entities.create_object(1054678467, c)
