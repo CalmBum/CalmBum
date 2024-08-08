@@ -2984,18 +2984,27 @@ end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 --Floating Island------------------------------------------------------------------------------------------------------------------------------------------
+local islandStuff = menu.list(worldList, "Island")
 island_block = 0
-menu.action(worldList, "Sky Island", {""},"Sky Island", function(click_type)
+menu.action(islandStuff, "Spawn Sky Island", {""},"Sky Island", function(click_type)
     local c = {}
     c.x = 0
     c.y = 0
     c.z = 500
     PED.SET_PED_COORDS_KEEP_VEHICLE(players.user_ped(), c.x, c.y, c.z+5)
-    if island_block == 0 or not DOES_ENTITY_EXIST(island_block) then
+    if island_block == 0 or not ENTITY.DOES_ENTITY_EXIST(island_block) then
         util.request_model(1054678467, 2000)
         island_block = entities.create_object(1054678467, c)
     end
 end)
+
+menu.action(islandStuff, "Delete Island", {""}, "", function()
+    if island_block ~= 0 or ENTITY.DOES_ENTITY_EXIST(island_block) then
+        entities.delete_by_handle(island_block)
+    end
+end)
+
+
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------
