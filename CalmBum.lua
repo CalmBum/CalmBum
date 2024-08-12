@@ -3013,52 +3013,16 @@ end)
 ------------------------------------------------------------------------- 
 
 
-function attachToVehicle(vehicle, position)
-    local entity1
-    local height, min, max = v3.new(), v3.new(), v3.new()
-    MISC.GET_MODEL_DIMENSIONS(ENTITY.GET_ENTITY_MODEL(vehicle), min, max)
-    height.y = max.y - min.y
-    height.z = max.z - min.z
-    local posY, posZ = 0.0, 0.0
-
-    if not PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) then
-        entity1 = players.user_ped()
-        if position == 1 then
-            posY = height.y / 3
-            posZ = height.z
-        elseif position == 2 then
-            posY = 0.0
-            posZ = height.z
-        elseif position == 3 then
-            posY = -height.y / 3
-            posZ = height.z
-        end
-    else
-        entity1 = entities.get_user_vehicle_as_handle(false)
-        if position == 1 then
-            posY = height.y
-            posZ = 0.0
-        elseif position == 2 then
-            posY = 0.0
-            posZ = height.z
-        elseif position == 3 then
-            posY = -height.y
-            posZ = 0.0
-        end
-    end
-
-    ENTITY.ATTACH_ENTITY_TO_ENTITY(entity1, vehicle, 0, 0.0, posY, posZ, 0, 0, 0, true, false, true, false, 0, true)
+function updateAttachment(vehicle, posX, posY, posZ)
+    local entity1 = PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) and entities.get_user_vehicle_as_handle(false) or players.user_ped()
     if ENTITY.IS_ENTITY_ATTACHED_TO_ENTITY(entity1, vehicle) then
-        util.toast("Success")
-    else
-        util.toast("Failed")
+        ENTITY.DETACH_ENTITY(entity1, true, true)
     end
+    ENTITY.ATTACH_ENTITY_TO_ENTITY(entity1, vehicle, 0, posX, posY, posZ, 0, 0, 0, true, false, true, false, 0, true, 0)
 end
 
-
 function addPlayer(pIdOn)
-    --Boosties--
-	menu.divider(menu.player_root(pIdOn), "CalmBum")
+    menu.divider(menu.player_root(pIdOn), "CalmBum")
 
     local rList = menu.list(menu.player_root(pIdOn), "Remote Options")
     local atpList = menu.list(rList, "Attach To Player")
@@ -3085,18 +3049,37 @@ function addPlayer(pIdOn)
         end
 	end)
 
-    --Attach to player vehicle--
     menu.divider(atpList, "Attach to player vehicle")
-    local position = 1
-    menu.slider(atpList, "Position", {"attachpositioncb"}, "1 = front, 2 = middle, 3 = back", 1, 3, 1, 1, function(val)
-        position = val
+    local attachX, attachY, attachZ = 0.0, 0.0, 0.0
+    local targetVehicle = nil
+
+    local function updatePosition()
+        if targetVehicle and ENTITY.DOES_ENTITY_EXIST(targetVehicle) then
+            updateAttachment(targetVehicle, attachX, attachY, attachZ)
+        end
+    end
+
+    menu.slider_float(atpList, "Left/Right", {"attachXcb"}, "- Left / + Right", -500, 500, 0, 10, function(val)
+        attachX = val / 100
+        updatePosition()
     end)
+
+    menu.slider_float(atpList, "Backward/Forward", {"attachYcb"}, "- Back / + Forward", -500, 500, 0, 10, function(val)
+        attachY = val / 100
+        updatePosition()
+    end)
+
+    menu.slider_float(atpList, "Down/Up", {"attachZcb"}, "- Down / + Up", -500, 500, 0, 10, function(val)
+        attachZ = val / 100
+        updatePosition()
+    end)
+
     menu.action(atpList, "Attach", {}, "", function()
         if pIdOn ~= players.user() then
             local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pIdOn)
             if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
-                local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-                attachToVehicle(vehicle, position)
+                targetVehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+                updatePosition()
             else
                 util.toast("Player is not in a vehicle")
             end
@@ -3105,7 +3088,6 @@ function addPlayer(pIdOn)
         end
     end)
 
-    --detach--
     menu.action(atpList, "Detach", {}, "", function()
         if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) then
             local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
@@ -3119,6 +3101,7 @@ function addPlayer(pIdOn)
                 ENTITY.DETACH_ENTITY(players.user_ped(), true, true)
             end
         end
+        targetVehicle = nil
     end)
 end
 
