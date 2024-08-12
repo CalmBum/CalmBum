@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2.1"
+local SCRIPT_VERSION = "7.2.2"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
