@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2.2"
+local SCRIPT_VERSION = "7.2.3"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -3013,12 +3013,12 @@ end)
 ------------------------------------------------------------------------- 
 
 
-function updateAttachment(vehicle, posX, posY, posZ)
+function updateAttachment(vehicle, posX, posY, posZ, rotation)
     local entity1 = PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) and entities.get_user_vehicle_as_handle(false) or players.user_ped()
     if ENTITY.IS_ENTITY_ATTACHED_TO_ENTITY(entity1, vehicle) then
         ENTITY.DETACH_ENTITY(entity1, true, true)
     end
-    ENTITY.ATTACH_ENTITY_TO_ENTITY(entity1, vehicle, 0, posX, posY, posZ, 0, 0, 0, true, false, true, false, 0, true, 0)
+    ENTITY.ATTACH_ENTITY_TO_ENTITY(entity1, vehicle, 0, posX, posY, posZ, 0, 0, rotation, true, false, true, false, 0, true, 0)
 end
 
 function addPlayer(pIdOn)
@@ -3050,12 +3050,12 @@ function addPlayer(pIdOn)
 	end)
 
     menu.divider(atpList, "Attach to player vehicle")
-    local attachX, attachY, attachZ = 0.0, 0.0, 0.0
+    local attachX, attachY, attachZ, attachRotation = 0.0, 0.0, 0.0, 0.0
     local targetVehicle = nil
 
     local function updatePosition()
         if targetVehicle and ENTITY.DOES_ENTITY_EXIST(targetVehicle) then
-            updateAttachment(targetVehicle, attachX, attachY, attachZ)
+            updateAttachment(targetVehicle, attachX, attachY, attachZ, attachRotation)
         end
     end
 
@@ -3071,6 +3071,11 @@ function addPlayer(pIdOn)
 
     menu.slider_float(atpList, "Down/Up", {"attachZcb"}, "- Down / + Up", -500, 500, 0, 10, function(val)
         attachZ = val / 100
+        updatePosition()
+    end)
+
+    menu.slider(atpList, "Rotation", {"attachRotationcb"}, "Rotate your character", 0, 359, 0, 1, function(val)
+        attachRotation = val
         updatePosition()
     end)
 
