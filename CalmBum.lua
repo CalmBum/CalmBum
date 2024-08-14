@@ -2095,14 +2095,24 @@ menu.toggle(miscList, "Oh shit button", {"ohshitcb"}, "When enabled pressing B/C
     end
 end)
 
-function getNearbyVehicles(ped, maxVehicles)
-	local vehicleList = memory.alloc((maxVehicles + 1) * 8)
-	memory.write_int(vehicleList, maxVehicles)
-	local vehiclesList = {}
-	for i = 1, PED.GET_PED_NEARBY_VEHICLES(ped, vehicleList) do
-		vehiclesList[i] = memory.read_int(vehicleList + i*8)
-	end
-	return vehiclesList
+function getNearbyEntities(ped, maxVehicles, maxPeds)
+    local vehiclesList = {}
+    local pedsList = {}
+    if maxVehicles ~= 0 then
+        local vehicleList = memory.alloc((maxVehicles + 1) * 8)
+        memory.write_int(vehicleList, maxVehicles)
+        for i = 1, PED.GET_PED_NEARBY_VEHICLES(ped, vehicleList) do
+            vehiclesList[i] = memory.read_int(vehicleList + i*8)
+        end
+    end
+    if maxPeds ~= 0 then
+        local pedList = memory.alloc((maxPeds + 1) * 8)
+        memory.write_int(pedList, maxPeds)
+        for i = 1, PED.GET_PED_NEARBY_PEDS(ped, pedList, -1) do
+            pedsList[i] = memory.read_int(pedList + i*8)
+        end
+    end
+	return vehiclesList, pedsList
 end
 
 function resetCar()
@@ -2131,7 +2141,7 @@ util.create_tick_handler(function()
     end
     
     if resettingCar then
-        local vehs = getNearbyVehicles(players.user_ped(), 30)
+        local vehs, peds = getNearbyEntities(players.user_ped(), 30)
         for vehs as veh do
             if VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1, 0) ~= players.user_ped() then
                 CAM.SET_GAMEPLAY_CAM_IGNORE_ENTITY_COLLISION_THIS_UPDATE(get_user_car_id())
@@ -3121,7 +3131,6 @@ players.dispatch_on_join()
 local newGhost = menu.list(ghostList, "New Ghost")
 local savedGhost = menu.list(ghostList, "Saved Ghosts")
 local ghostSettings = menu.list(savedGhost, "Settings")
-local ghostRunning = false
 
 --File stuff------------------------------------------------------------------------------------
 -- look for/create ghost directory in scripts folder
@@ -3129,13 +3138,12 @@ local ghostDir <const> = filesystem.scripts_dir() .. "CalmBum\\ghosts\\"
 if not filesystem.exists(ghostDir) then
 	filesystem.mkdir(ghostDir)
 end
-
 ---------------------------------------------------------------------------------------
 
 
 
 --New Ghost---------------------------------------------------------------------------------------------------------------------------------------------------------
-local ghostName
+local ghostName = ""
 local showStart = false
 local startCar
 local raceGhost = false
@@ -3162,99 +3170,79 @@ function markerCar(vehHash, veh)
     ENTITY.SET_ENTITY_ALPHA(startCar, 153, 0)
 end
 
-function saveCar(ghostFile, veh, vehHash)
-    local colour = {p = memory.alloc(8), s = memory.alloc(8), pearl = memory.alloc(8), wheel = memory.alloc(8)}
-    local lights = {r = memory.alloc(8), g = memory.alloc(8), b = memory.alloc(8)}
-    local custColour1 = {r = memory.alloc(8), g = memory.alloc(8), b = memory.alloc(8)}
-    local custColour2 = {r = memory.alloc(8), g = memory.alloc(8), b = memory.alloc(8)}
+local ghostCount = 1
 
-    -- write veh info to first line
-    ghostFile:write(vehHash .. "\n")
-
-    -- write mods
-    for i = 0, 80, 1 do
-        local mod = VEHICLE.GET_VEHICLE_MOD(veh, i)
-        ghostFile:write(mod .. "\n")
-    end
-
-    -- get wheel type
-    ghostFile:write(VEHICLE.GET_VEHICLE_WHEEL_TYPE(veh) .. "\n")
-
-    -- get headlight colour
-    ghostFile:write(VEHICLE.GET_VEHICLE_XENON_LIGHT_COLOR_INDEX(veh) .. "\n")
-
-    -- get underglow
-    for i = 0, 3, 1 do
-        -- check if light enabled
-        local enabled = VEHICLE.GET_VEHICLE_NEON_ENABLED(veh, i)
-
-        -- colour of light
-        if enabled then
-            VEHICLE.GET_VEHICLE_NEON_COLOUR(veh, lights.r, lights.g, lights.b)
-            ghostFile:write("1\n" .. memory.read_int(lights.r) .. "\n" .. memory.read_int(lights.g) .. "\n" .. memory.read_int(lights.b) .. "\n")
-        else
-            ghostFile:write("0\n0\n0\n0\n")
-        end
-    end
-
-    -- get/write paint colour
-    VEHICLE.GET_VEHICLE_COLOURS(veh, colour.p, colour.s)
-    VEHICLE.GET_VEHICLE_EXTRA_COLOURS(veh, colour.pearl, colour.wheel)
-    ghostFile:write(memory.read_int(colour.p) .. "\n" .. memory.read_int(colour.s) .. "\n" .. memory.read_int(colour.pearl) .. "\n" .. memory.read_int(colour.wheel) .. "\n")
-
-    -- check for custom colours
-    if VEHICLE.GET_IS_VEHICLE_PRIMARY_COLOUR_CUSTOM(veh) then
-        VEHICLE.GET_VEHICLE_CUSTOM_PRIMARY_COLOUR(veh, custColour1.r, custColour1.g, custColour1.b)
-        ghostFile:write("1\n" .. memory.read_int(custColour1.r) .. "\n" .. memory.read_int(custColour1.g) .. "\n" .. memory.read_int(custColour1.b) .. "\n")
-    else
-        ghostFile:write("0\n0\n0\n0\n")
-    end
-
-    if VEHICLE.GET_IS_VEHICLE_SECONDARY_COLOUR_CUSTOM(veh) then
-        VEHICLE.GET_VEHICLE_CUSTOM_SECONDARY_COLOUR(veh, custColour2.r, custColour2.g, custColour2.b)
-        ghostFile:write("1\n" .. memory.read_int(custColour2.r) .. "\n" .. memory.read_int(custColour2.g) .. "\n" .. memory.read_int(custColour2.b) .. "\n")
-    else
-        ghostFile:write("0\n0\n0\n0\n")
-    end
-
-    -- get/write livery
-    local livery = VEHICLE.GET_VEHICLE_LIVERY(veh)
-    local livery2 = VEHICLE.GET_VEHICLE_LIVERY2(veh)
-    ghostFile:write(livery .. "\n" .. livery2 .. "\n")
-end
-
-function recordGhost(ghostFile, veh)
+function recordGhost(ghost, veh, ghostFile)
     -- prevent camera from tweaking inside of start car
     if showStart then
         CAM.SET_GAMEPLAY_CAM_IGNORE_ENTITY_COLLISION_THIS_UPDATE(startCar)
     end
+    local data = {
+        pos = {
+            x,
+            y,
+            z
+        },
+        rot = {
+            x,
+            y,
+            z
+        },
+        input,
+        steer,
+        count = ghostCount,
+        extra = {
+            rpm = entities.get_rpm(entities.get_user_vehicle_as_pointer()),
+            gear = entities.get_current_gear(entities.get_user_vehicle_as_pointer()),
+            speed = ENTITY.GET_ENTITY_SPEED(veh)
+        }
+    }
+
     -- record position info
-    local loc = ENTITY.GET_ENTITY_COORDS(veh, true)
-    local rot = ENTITY.GET_ENTITY_ROTATION(veh, 2)
-    ghostFile:write(loc.X .. "\n" .. loc.Y .. "\n" .. loc.Z .. "\n" .. rot.X .. "\n" .. rot.Y .. "\n" .. rot.Z .. "\n")
+    local pos = ENTITY.GET_ENTITY_COORDS(veh, true)
+    local rot5 = ENTITY.GET_ENTITY_ROTATION(veh, 5)
+    local rot4 = ENTITY.GET_ENTITY_ROTATION(veh, 4)
+    local rot2 = ENTITY.GET_ENTITY_ROTATION(veh, 2)
+
+    data.pos.x = pos.x
+    data.pos.y = pos.y
+    data.pos.z = pos.z
+
+    data.rot.x = rot5.x
+    data.rot.y = rot4.y
+    data.rot.z = rot2.z
+
     -- record input (for neon and idk maybe other stuff in future)
     -- brake takes priority
     if PAD.IS_CONTROL_PRESSED(72, 72) then
-        ghostFile:write("1\n")
+        data.input = 1
     -- then gas
     elseif PAD.IS_CONTROL_PRESSED(71, 71) then
-        ghostFile:write("2\n")
+        data.input = 2
     -- then ebrake
     elseif PAD.IS_CONTROL_PRESSED(76, 76) then
-        ghostFile:write("3\n")
+        data.input = 3
     -- otherwise off
     else
-        ghostFile:write("0\n")
+        data.input = 4
     end
 
     -- steering angle (-1 left 1 right)
-    ghostFile:write(PAD.GET_CONTROL_NORMAL(146, 146) .. "\n")
+    data.steer = PAD.GET_CONTROL_NORMAL(146, 146)
+
+    --table.insert(ghost.data, data)
+
+    ghostFile:write('"' .. ghostCount .. '": ' .. json.stringify(data, nil, 4) .. ",\n")
+    ghostCount += 1
+
     util.yield(1)
+    return ghostCount - 1
 end
 
-function startGhost(ghostFile, veh)
+function startGhost(ghost, veh, ghostFile)
     local timerStart = true
     local time
+    local wtf = {}
     -- get start time
     if timerStart then
         time = util.current_time_millis()
@@ -3263,101 +3251,116 @@ function startGhost(ghostFile, veh)
     if raceGhost then
         -- record until race finish
         while v3.distance(CAM.GET_FINAL_RENDERED_CAM_COORD(), CAM.GET_GAMEPLAY_CAM_COORD()) == 0.0 do
-            recordGhost(ghostFile, veh)
+            wtf.len = recordGhost(ghost, veh, ghostFile)
         end
     else
         -- record until horn or look behind is pressed
         while not PAD.IS_CONTROL_JUST_PRESSED(79, 79) and not PAD.IS_CONTROL_JUST_PRESSED(86, 86) do
-            recordGhost(ghostFile, veh)
+            wtf.len = recordGhost(ghost, veh, ghostFile)
         end
     end
+
+    ghostCount = 1
+
     -- get total length of run
     time = (util.current_time_millis() - time) / 1000
-
-    -- write * to show end of file
-    ghostFile:write("*")
+    wtf.time = time
 
     -- write time
-    ghostFile:write(time)
+    ghost.time = time
     
-    -- close file
+    ghostFile:write('"end": ' .. json.stringify(wtf, nil, 4) .. "\n}")
     ghostFile:close()
 end
 
--- get name for file
-menu.text_input(newGhost, "Name", {"ghostnamecb"}, "Enter name for ghost", function(input)
-    ghostName = input
-end)
-
-menu.action(newGhost, "Start", {"startghostcb"}, "Start a new run", function()
-    local veh = get_user_car_id()
-    if ghostRunning then
+local recordingGhost = false
+menu.text_input(newGhost, "Create new ghost", {"newghostcb"}, "Create a new ghost\nleave blank for auto name", function(input, click)
+    if (click & CLICK_FLAG_AUTO) ~= 0 then
+        return
+    elseif onFoot() then
+        util.toast("You must be in a vehicle")
+        return
+    elseif recordingGhost then
         util.toast("Already running")
         return
     end
-    if veh == 0 then
-        util.toast("You must be in a vehicle")
+    ghostName = input
+    local veh = get_user_car_id()
+    recordingGhost = true
+    if ghostName == "" then
+        ghostName = VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user()))
+        ghostName = ghostName:sub(1, 1):upper() .. ghostName:sub(2):lower() .. "_" .. os.date("%d-%I-%M-%S")
+    end
+
+    -- create and open new file with name
+    local ghostFile = ghostDir .. ghostName .. ".json"
+    local file
+    local vehHash = entities.get_model_hash(veh)
+
+    if filesystem.exists(ghostFile) then
+        util.toast("File name is already in use")
+        recordingGhost = false
         return
     else
-        if ghostName == nil then
-            ghostName = os.date("%d-%m-%y_%I-%M-%S")
-        end
-        ghostRunning = true
-        -- create and open new file with name
-        local createGhost = ghostDir .. ghostName .. ".txt"
-        local vehHash = entities.get_model_hash(veh)
-
-        if not filesystem.exists(createGhost) then
-            ghostFile = io.open(createGhost, "a")
-        else
-            util.toast("File name is already in use")
-            ghostRunning = false
+        file = io.open(ghostFile, "wb")
+        if file == nil then
+            util.toast("Error opening file")
+            recordingGhost = false
             return
         end
-    
-        saveCar(ghostFile, veh, vehHash)
-
-        if raceGhost then
-            while VEHICLE.IS_VEHICLE_STOPPED(veh) do
-                util.yield_once()
-                util.toast("Waiting for start")
-            end
-            startGhost(ghostFile, veh)
-        else
-            -- wait for press to start recording
-            util.toast("Press horn or look behind to start recording")
-            while not PAD.IS_CONTROL_PRESSED(79, 79) and not PAD.IS_CONTROL_PRESSED(86, 86) do
-                util.yield(10)
-            end
-            util.toast("Press horn or look behind to stop recording")
-            util.yield(100)
-
-            -- create start car
-            if showStart then
-                markerCar(vehHash, veh)
-            end
-    
-            -- record info to file (A to stop)
-            startGhost(ghostFile, veh)
-
-            -- delete start car
-            if showStart then
-                entities.delete_by_handle(startCar)
-                startCar = nil
-            end
-        end
-
-        util.toast("Saved " .. ghostName)
-
-        -- refresh so new run shows up in saved
-        refreshGhosts()
-
-        ghostRunning = false
     end
+
+    file:write("{\n")
+
+    local ghost = {
+        car = {},
+        data = {},
+    }
+    
+    local car = saveVeh(get_user_car_id())
+
+    file:write('"car": ' .. json.stringify(car, nil, 4) .. ",\n")
+
+    if raceGhost then
+        while VEHICLE.IS_VEHICLE_STOPPED(veh) do
+            util.yield_once()
+            util.toast("Waiting for start")
+        end
+        startGhost(ghost, veh, file)
+    else
+        -- wait for press to start recording
+        util.toast("Press horn or look behind to start recording")
+        while not PAD.IS_CONTROL_PRESSED(79, 79) and not PAD.IS_CONTROL_PRESSED(86, 86) do
+            util.yield(10)
+        end
+        util.toast("Press horn or look behind to stop recording")
+        util.yield(100)
+
+        -- create start car
+        if showStart then
+            markerCar(vehHash, veh)
+        end
+    
+        -- record info to file (A to stop)
+        startGhost(ghost, veh, file)
+
+        -- delete start car
+        if showStart then
+            entities.delete_by_handle(startCar)
+            startCar = nil
+        end
+    end
+
+    util.toast("Saved " .. ghostName)
+    ghostName = ""
+
+    -- refresh so new run shows up in saved
+    refreshGhosts()
+    recordingGhost = false
 end)
 
 menu.toggle(newGhost, "Show start location", {"ghostshowstartcb"}, "Show where you start your run for perfect loops", function()
-    if ghostRunning then
+    if recordingGhost then
         util.toast("Cannot change while running")
     else
         showStart = not showStart
@@ -3365,7 +3368,7 @@ menu.toggle(newGhost, "Show start location", {"ghostshowstartcb"}, "Show where y
 end)
 
 menu.toggle(newGhost, "Record Race", {"raceghostcb"}, "Use this option to record a race without needing to time the start and finish\nPress start once you have spawned in your car in the race\nTHIS WILL BREAK IF NOT IN A RACE", function()
-    if ghostRunning then
+    if recordingGhost then
         util.toast("Cannot change while running")
     else
         raceGhost = not raceGhost
@@ -3379,106 +3382,21 @@ end)
 ---------------------------------------------------------------------------------------
 local ghostSpeed = 1
 local showInput = true
-local ghostPause = false
-local enableCollision = false
+local ghostCollision = false
 local spawnInside = false
 local spawnStig = true
 local ghostAlpha = 204
-local ghostCar = nil
-local stig
-local fastForward = 1
-local playing
+local fastForward = 0
+local stopCollision
 
-function spawnCar(lines)
-    -- spawn vehicle with first 5 lines
-    local veh = lines[1]
-    STREAMING.REQUEST_MODEL(veh)
-    while not STREAMING.HAS_MODEL_LOADED(veh) do
-        util.yield_once()
-    end
-    local ghostCar = VEHICLE.CREATE_VEHICLE(veh, lines[115], lines[116], lines[117], lines[120], 0, 1, 0) -- spawns it kinda right but kinda trash location wise
-    STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(veh)
-    -- set proper location and rotation
-    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(ghostCar, lines[115], lines[116], lines[117], 0, 0, 0)
-    ENTITY.SET_ENTITY_ROTATION(ghostCar, lines[118], lines[119], lines[120], 2, 1)
-
-    -- mod vehicle
-    VEHICLE.SET_VEHICLE_MOD_KIT(ghostCar, 0) -- allows mods to work
-
-    for i = 2, 82, 1 do
-        VEHICLE.SET_VEHICLE_MOD(ghostCar, i-2, lines[i], 0)
-        if i == 25 then
-            -- if this isnt here the game insta crashes :)
-            VEHICLE.SET_VEHICLE_WHEEL_TYPE(ghostCar, lines[83])
-        end
-    end
-
-    -- headlights
-    if tonumber(lines[84]) != 255 then
-        VEHICLE.TOGGLE_VEHICLE_MOD(ghostCar, 22, true)
-        VEHICLE.SET_VEHICLE_XENON_LIGHT_COLOR_INDEX(ghostCar, tonumber(lines[84]))
-    end
-
-    -- underglow
-    for i = 0, 3, 1 do
-        -- check if light enabled
-        local enabled = lines[85 + (i*4)]
-
-        -- colour of light
-        if tonumber(enabled) == 1 then
-            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, i, true)
-            VEHICLE.SET_VEHICLE_NEON_COLOUR(ghostCar, lines[86 + (i*4)], lines[87 + (i*4)], lines[88 + (i*4)])
-        end
-    end
-
-    -- set paint colour
-    VEHICLE.SET_VEHICLE_COLOURS(ghostCar, lines[101], lines[102])
-    VEHICLE.SET_VEHICLE_EXTRA_COLOURS(ghostCar, lines[103], lines[104])
-
-    -- check for custom paint colour
-    for i = 0, 1, 1 do
-        -- check if light enabled
-        local enabled = lines[105 + (i*4)]
-
-        -- colour of light
-        if tonumber(enabled) == 1 and i == 0 then
-            VEHICLE.SET_VEHICLE_CUSTOM_PRIMARY_COLOUR(ghostCar, lines[106], lines[107], lines[108])
-        elseif tonumber(enabled) == 1 and i == 1 then
-            VEHICLE.SET_VEHICLE_CUSTOM_SECONDARY_COLOUR(ghostCar, lines[110], lines[111], lines[112])
-        end
-    end
-
-    -- set livery
-    VEHICLE.SET_VEHICLE_LIVERY(ghostCar, lines[113])
-    VEHICLE.SET_VEHICLE_LIVERY2(ghostCar, lines[114])
-
-    -- set license plate
-    VEHICLE.SET_VEHICLE_NUMBER_PLATE_TEXT(ghostCar, "GHOST")
-
-    -- turn engine on
-    VEHICLE.SET_VEHICLE_ENGINE_ON(ghostCar, 1, 1, 0)
-
-    -- set opacity
-    ENTITY.SET_ENTITY_ALPHA(ghostCar, ghostAlpha, 0)
-
-    -- enable collision
-    if not enableCollision then
-        ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(get_user_car_id(), ghostCar, 0, 1)
-    end
-
-    -- freeze position (prevents stig from driving away when paused)
-    ENTITY.FREEZE_ENTITY_POSITION(ghostCar, true)
-
-    return ghostCar
-end
-
-function spawnStig(ghostCar)
+function createStig(ghostInfo)
     -- spawn stig
     STREAMING.REQUEST_MODEL(2363925622)
     while not STREAMING.HAS_MODEL_LOADED(2363925622) do
         util.yield_once()
     end
-    local stig = PED.CREATE_PED_INSIDE_VEHICLE(ghostCar, 2, 2363925622, -1, 0, 0)
+    local stig = PED.CREATE_PED_INSIDE_VEHICLE(ghostInfo.ghostCar, 2, 2363925622, -1, 1, 0)
+    ghostInfo.stig = stig
     STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(2363925622)
     
     -- set opacity
@@ -3486,138 +3404,201 @@ function spawnStig(ghostCar)
 
     -- make stig steer a bit to look normalish
     TASK.CLEAR_PED_TASKS(stig)
-    TASK.TASK_VEHICLE_DRIVE_WANDER(stig, ghostCar, 100.0, 8388614)
+    PED.SET_PED_STAY_IN_VEHICLE_WHEN_JACKED(stig, true)
+    TASK.TASK_VEHICLE_DRIVE_WANDER(stig, ghostInfo.ghostCar, 1, 17039360)
+    PED.SET_PED_STEERS_AROUND_OBJECTS(stig, false)
+    PED.SET_PED_STEERS_AROUND_VEHICLES(stig, false)
+    PED.SET_PED_STEERS_AROUND_PEDS(stig, false)
     
     -- force stig to stay
     PED.SET_PED_GET_OUT_UPSIDE_DOWN_VEHICLE(stig, false)
-
-    return stig
+    return
 end
 
-function runGhost(ghostCar, lines, looped)
+util.create_tick_handler(function()
+    -- this currently only works if stig is spawned and still does a weird half collision push thing with players
+    if stopCollision then
+        local vehs, peds = getNearbyEntities(stopCollision.stig, 30, 30)
+        for vehs as veh do
+            if VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1, 0) ~= players.user_ped() then
+                ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(veh, stopCollision.ghostCar, true)
+            end
+        end
+        for peds as ped do
+            ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(ped, stopCollision.ghostCar, true)
+        end
+    end
+end)
+
+function runGhost(ghostInfo, ghost)
     local count = 1
     local steerAngle = 0
-    local steer = 20
-    local i = 115
+    local steer = 5
+    local i = 1
+    local length
+    local x, y, z
+
+    for ghost as thing do
+        if thing.count == 1 then
+            x = thing.pos.x
+            y = thing.pos.y
+            z = thing.pos.z
+        elseif type(thing.len) == "number" then
+            length = thing.len
+        end
+    end
     
-    while i <= table.getn(lines) do
-        while ghostPause do
+    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(ghostInfo.ghostCar, x, y, z, 0, 0, 0)
+
+    if ghostInfo.pause then
+        while ghostInfo.pause do
             -- wait
             util.yield(1)
         end
-        if PAD.IS_CONTROL_JUST_PRESSED(79, 79) or PAD.IS_CONTROL_JUST_PRESSED(86, 86) then
-            util.toast("Stopped ghost")
-            return
-        elseif lines[i] == "*" then -- end of file
-            break
-        elseif count == 1 then -- x coord
-            lX = lines[i]
-            count += 1
-        elseif count == 2 then -- y coord
-            lY = lines[i]
-            count += 1
-        elseif count == 3 then -- z coord
-            lZ = lines[i]
-            count += 1
-        elseif count == 4 then -- x rotation
-            rX = lines[i]
-            count += 1
-        elseif count == 5 then -- y rotation
-            rY = lines[i]
-            count += 1
-        elseif count == 6 then -- z rotation
-            rZ = lines[i]
-            ENTITY.SET_ENTITY_COORDS_NO_OFFSET(ghostCar, lX, lY, lZ, 0, 0, 0)
-            ENTITY.SET_ENTITY_ROTATION(ghostCar, rX, rY, rZ, 2, 1)
-            count += 1
-        elseif count == 7 then -- input
-            if showInput then
-                input = lines[i]
-                -- brake
-                if tonumber(input) == 1 then
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 2, true)
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 3, true)
-                    VEHICLE.SET_VEHICLE_NEON_COLOUR(ghostCar, 255, 0, 0)
-                    VEHICLE.SET_VEHICLE_BRAKE_LIGHTS(ghostCar, true)
-                -- gas
-                elseif tonumber(input) == 2 then
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 2, true)
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 3, true)
-                    VEHICLE.SET_VEHICLE_NEON_COLOUR(ghostCar, 0, 255, 0)
-                    VEHICLE.SET_VEHICLE_BRAKE_LIGHTS(ghostCar, false)
-                -- then ebrake
-                elseif tonumber(input) == 3 then
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 2, true)
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 3, true)
-                    VEHICLE.SET_VEHICLE_NEON_COLOUR(ghostCar, 255, 0, 0)
-                    VEHICLE.SET_VEHICLE_BRAKE_LIGHTS(ghostCar, false)
-                -- otherwise off
-                else
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 0, false)
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 1, false)
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 2, false)
-                    VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostCar, 3, false)
-                    VEHICLE.SET_VEHICLE_BRAKE_LIGHTS(ghostCar, false)
+    end
+
+    ENTITY.FREEZE_ENTITY_POSITION(ghostInfo.ghostCar, false)
+
+    while i <= length do
+        for ghost as data do
+            if data.count == i then
+                while ghostInfo.pause do
+                    util.yield(1)
                 end
-            end
-            count += 1
-        elseif count == 8 then -- steering                       Only works when user is in driver seat of ghost :/
-            -- 0.14 seems to be max angle
-            if steer == 20 then
-                steerAngle = lines[i] * -0.1
-                steer = 1
-            else
-                steer += 1
-            end
-            VEHICLE.SET_VEHICLE_STEER_BIAS(ghostCar, steerAngle)
-            util.yield(ghostSpeed)
-            count = 1
-        end
-        i += 1
-        if fastForward != 1 and i >= 123 then
-            i += (fastForward * 8)
-        end
-    end
-end
+                if PAD.IS_CONTROL_JUST_PRESSED(79, 79) or ghostInfo.stop then
+                    i += length
+                    util.toast("Stopped " .. ghostInfo.name)
+                else
+                    local pX = data.pos.x
+                    local pY = data.pos.y
+                    local pZ = data.pos.z
+                    local rX = data.rot.x
+                    local rY = data.rot.y
+                    local rZ = data.rot.z
 
-function playGhost(filename, looped, race)
-    ghostRunning = true
-    playing = filename
-    local ghost = io.open(ghostDir .. filename .. ".txt", r)
+                    local targetPos = {x = pX, y = pY, z = pZ}
+                    local oldPos = ENTITY.GET_ENTITY_COORDS(ghostInfo.ghostCar)
+                    local vel = {
+                        x = ((targetPos.x - oldPos.x) * 10),
+                        y = ((targetPos.y - oldPos.y) * 10),
+                        z = ((targetPos.z - oldPos.z) * 10)
+                    }
+                    ENTITY.SET_ENTITY_VELOCITY(ghostInfo.ghostCar, vel.x, vel.y, vel.z)
+        
+                    local targetRot = {x = rX, y = rY, z = rZ}
+                    local oldRot5 = ENTITY.GET_ENTITY_ROTATION(ghostInfo.ghostCar, 5)
+                    local oldRot4 = ENTITY.GET_ENTITY_ROTATION(ghostInfo.ghostCar, 4)
+                    local oldRot2 = ENTITY.GET_ENTITY_ROTATION(ghostInfo.ghostCar, 2)
+                    local velR = {
+                        x = (targetRot.x - oldRot5.x),
+                        y = (targetRot.y - oldRot4.y),
+                        z = (targetRot.z - oldRot2.z)
+                    }
+                    ENTITY.SET_ENTITY_ANGULAR_VELOCITY(ghostInfo.ghostCar, velR.x, velR.y, velR.z)
 
-    -- create array
-    local lines = {}
-    for line in ghost:lines() do    
-        table.insert(lines, line)
-    end
-        
-    -- spawn car
-    ghostCar = spawnCar(lines)
-    
-    -- go inside car with stig if more than 1 seat
-    if spawnInside then 
-        if spawnStig and VEHICLE.GET_VEHICLE_MODEL_NUMBER_OF_SEATS(lines[1]) > 1 then
-            PED.SET_PED_INTO_VEHICLE(players.user_ped(), ghostCar, 0)
-        elseif !spawnStig then
-            PED.SET_PED_INTO_VEHICLE(players.user_ped(), ghostCar, -1)
-        end
-    end
-    
-    -- spawn stig
-    if spawnStig then
-        stig = spawnStig(ghostCar)
-    end
-        
+                    if showInput then
+                        input = data.input
+                        -- brake
+                        if tonumber(input) == 1 then
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 2, true)
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 3, true)
+                            VEHICLE.SET_VEHICLE_NEON_COLOUR(ghostInfo.ghostCar, 255, 0, 0)
+                            VEHICLE.SET_VEHICLE_BRAKE_LIGHTS(ghostInfo.ghostCar, true)
+                        -- gas
+                        elseif tonumber(input) == 2 then
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 2, true)
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 3, true)
+                            VEHICLE.SET_VEHICLE_NEON_COLOUR(ghostInfo.ghostCar, 0, 255, 0)
+                            VEHICLE.SET_VEHICLE_BRAKE_LIGHTS(ghostInfo.ghostCar, false)
+                        -- then ebrake
+                        elseif tonumber(input) == 3 then
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 2, true)
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 3, true)
+                            VEHICLE.SET_VEHICLE_NEON_COLOUR(ghostInfo.ghostCar, 255, 0, 0)
+                            VEHICLE.SET_VEHICLE_BRAKE_LIGHTS(ghostInfo.ghostCar, false)
+                        -- otherwise off
+                        else
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 0, false)
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 1, false)
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 2, false)
+                            VEHICLE.SET_VEHICLE_NEON_ENABLED(ghostInfo.ghostCar, 3, false)
+                            VEHICLE.SET_VEHICLE_BRAKE_LIGHTS(ghostInfo.ghostCar, false)
+                        end
+                    end
+
+                    entities.set_rpm(entities.handle_to_pointer(ghostInfo.ghostCar), data.extra.rpm)
+
+                    if not ghostCollision then
+                        stopCollision = ghostInfo
+                    end
+                    
+                    -- steering
+                    -- 0.14 seems to be max angle            this may not even be doing anything, idk im tired
+                    steerAngle = data.steer * -0.14
+                    if spawnStig then
+                        PED.SET_PED_STEER_BIAS(ghostInfo.stig, data.steer)
+                    end
+                    VEHICLE.SET_VEHICLE_STEER_BIAS(ghostInfo.ghostCar, steerAngle)
+                    util.yield(ghostSpeed)
+                    i += 1
+                    if fastForward ~= 0 then
+                        if fastForward < 0 and (i + fastForward) < 1 then
+                            i = length - 1
+                        else
+                            i += fastForward
+                        end -- holy
+                    end -- sweet
+                end -- fuck
+            end -- thats
+        end -- a
+    end -- lotta
+end -- ends
+
+function playGhost(ghostInfo, looped, race, folder)
     if race then
         local veh = get_user_car_id()
         if veh == 0 then
             util.toast("Must be in vehicle")
             return
         end
+    end
+
+    ghostInfo.running = true
+    local ghost, happy, file
+    file = io.open(ghostInfo.path, r)
+    if file then
+        local list = file:read("*all")
+        file:close()
+        ghost, happy = json.parse(list, false)
+        if not happy then
+            util.toast("Error opening file")
+            return
+        end
+    end
+        
+    -- spawn car
+    ghostInfo.ghostCar = spawnVeh(ghost.car, true, ghost)
+    
+    -- go inside car with stig if more than 1 seat
+    if spawnInside then 
+        if spawnStig and VEHICLE.ARE_ANY_VEHICLE_SEATS_FREE(ghostInfo.ghostCar) then
+            PED.SET_PED_INTO_VEHICLE(players.user_ped(), ghostInfo.ghostCar, 0)
+        elseif !spawnStig then
+            PED.SET_PED_INTO_VEHICLE(players.user_ped(), ghostInfo.ghostCar, -1)
+        end
+    end
+    
+    -- spawn stig
+    if spawnStig then
+        createStig(ghostInfo)
+    end
+
+    if race then
+        local veh = get_user_car_id()
         while VEHICLE.IS_VEHICLE_STOPPED(veh) do
             util.yield_once()
         end
-        runGhost(ghostCar, lines)
+        runGhost(ghostInfo, ghost)
     else
         -- countdown
         for i = 3, 0, -1 do
@@ -3631,129 +3612,233 @@ function playGhost(filename, looped, race)
     
         -- play run
         if looped then
-            while not PAD.IS_CONTROL_PRESSED(79, 79) and not PAD.IS_CONTROL_PRESSED(86, 86) do
-                runGhost(ghostCar, lines, looped)
+            while not PAD.IS_CONTROL_PRESSED(79, 79) and not ghostInfo.stop do
+                runGhost(ghostInfo, ghost)
             end
+            ghostInfo.stop = false
         else
-            runGhost(ghostCar, lines, looped)
+            runGhost(ghostInfo, ghost)
         end
     end
     
-    -- close file and remove entities
-    ghost:close()
-    entities.delete_by_handle(ghostCar)
+    -- remove entities
+    entities.delete_by_handle(ghostInfo.ghostCar)
     if spawnStig then
-        entities.delete_by_handle(stig)
+        entities.delete_by_handle(ghostInfo.stig)
     end
-    ghostRunning = false
-    playing = nil
-    ghostCar = nil
-    stig = nil
+    stopCollision = false
+    ghostInfo.running = false
+    ghostInfo.ghostCar = nil
+    ghostInfo.stig = nil
 end
 
-local savedGhosts
 local ghostRefs = {}
+local ghosts = {}
+
+function showGhost(ghostFolder, save, folder)
+    -- get file names
+    local filename, ext = string.match(save, '^.+\\(.+)%.(.+)$') -- didnt want to learn string things so stole from wiri, thanks <3
+    local temp = menu.list(ghostFolder, filename)
+
+    local ghostInfo = {
+        name = filename,
+        path,
+        ghostCar = nil,
+        stig = nil,
+        running = false,
+        pause = false,
+        stop = false
+    }
+    table.insert(ghosts, ghostInfo)
+
+    if folder == "" then
+        table.insert(ghostRefs, temp)
+        ghostInfo.path = ghostDir .. ghostInfo.name .. ".json"
+    else
+        ghostInfo.path = folder .. "\\" .. ghostInfo.name .. ".json"
+    end
+    
+    -- play ghost
+    menu.action(temp, "Play", {"ghostplay" .. filename}, "Play the selected run\nLOOK BEHIND BUTTON (Right Stick / C) TO END RUN", function()
+        if not ghostInfo.running then
+            playGhost(ghostInfo, false, false, folder)
+        else
+            util.toast("Already running")
+        end
+    end)
+    
+    -- play looped ghost
+    menu.action(temp, "Play Looped", {"ghostplayloop" .. filename}, "Play the selected run looped\nLOOK BEHIND BUTTON (Right Stick / C) TO END RUN", function()
+        if not ghostInfo.running then
+            playGhost(ghostInfo, true, false, folder)
+        else
+            util.toast("Already running")
+        end
+    end)
+
+    -- play in race
+    menu.action(temp, "Play in race", {"ghostplayrace" .. filename}, "Play the selected run in a race\nLOOK BEHIND BUTTON (Right Stick / C) TO END RUN", function()
+        if not ghostInfo.running then
+            playGhost(ghostInfo, false, true, folder)
+        else
+            util.toast("Already running")
+        end
+    end)
+
+    -- stop
+    menu.action(temp, "Stop ghost", {"ghoststop" .. filename}, "Stop the selected run, use this if you have multiple running but only want to end one", function()
+        ghostInfo.stop = true
+        util.yield(500)
+        ghostInfo.stop = false
+    end)
+
+    -- pause
+    menu.toggle(temp, "Pause", {"ghostpause" .. filename}, "Pause active run", function()
+        if ghostInfo.running then
+            ghostInfo.pause = not ghostInfo.pause
+            if ghostInfo.pause then
+                ENTITY.FREEZE_ENTITY_POSITION(ghostInfo.ghostCar, true)
+            else
+                ENTITY.FREEZE_ENTITY_POSITION(ghostInfo.ghostCar, false)
+            end
+        else
+            util.toast("Nothing to pause")
+        end
+    end, false)
+
+    -- tp to start
+    menu.action(temp, "TP to start", {"ghosttp" .. filename}, "Teleport to start of saved ghost", function()
+        if not ghostInfo.running then
+            local ghost, happy, file
+            file = io.open(ghostInfo.path, r)
+            if file then
+                local list = file:read("*all")
+                file:close()
+                ghost, happy = json.parse(list, false)
+                if not happy then
+                    util.toast("Error opening file")
+                    return
+                end
+            end
+
+            local x, y, z, h
+            for ghost as thing do
+                if thing.count == 1 then
+                    x = thing.pos.x
+                    y = thing.pos.y
+                    z = thing.pos.z
+                    h = thing.rot.z
+                end
+            end
+            
+            -- set coord and rotation if in vehicle to match start
+            PED.SET_PED_COORDS_KEEP_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), x, y, z)
+            ENTITY.SET_ENTITY_HEADING(get_user_car_id(), h)
+        else
+            util.toast("Cannot TP while ghost is running")
+        end
+    end)
+
+    -- delete ghost
+    deleteGhost = menu.list(temp, "Delete")
+    menu.action(deleteGhost, "Delete", {"ghostdelete" .. filename}, "Delete the selected ghost, no take backs", function()
+        if not ghostInfo.running then
+            if folder ~= "" then
+                if #filesystem.list_files(folder) == 1 then
+                    os.remove(save)
+                    os.remove(folder)
+                else
+                    os.remove(save)
+                end
+            else
+                os.remove(save)
+            end
+            util.toast("Deleted")
+            refreshGhosts()
+        else
+            util.toast("Cannot delete while running")
+        end
+    end)
+
+end
 
 function listGhosts()
-    savedGhosts = filesystem.list_files(ghostDir)
-
-    for _, path in savedGhosts do
-        -- get file names
-        local filename, ext = string.match(path, '^.+\\(.+)%.(.+)$') -- didnt want to learn string things so stole from wiri, thanks <3
-        _ = menu.list(savedGhost, filename)
-        table.insert(ghostRefs, _)
-
-    
-        -- play ghost
-        menu.action(_, "Play", {"ghostplay" .. filename}, "Play the selected run\nHORN OR LOOK BEHIND BUTTON TO END RUN", function()
-            if not ghostRunning then
-                playGhost(filename)
-            else
-                util.toast("Already running")
+    ghostFiles = filesystem.list_files(ghostDir)
+    local files = {}
+    local folders = {}
+    for ghostFiles as file do
+        if !filesystem.is_dir(file) then
+            table.insert(files, file)
+        else
+            table.insert(folders, file)
+            if #folders == 1 then
+                local folderDivider = menu.divider(savedGhost, "Folders")
+                table.insert(ghostRefs, folderDivider)
             end
-        end)
-    
-        -- play looped ghost
-        menu.action(_, "Play Looped", {"ghostplayloop" .. filename}, "Play the selected run looped\nHORN OR LOOK BEHIND BUTTON TO END RUN", function()
-            if not ghostRunning then
-                playGhost(filename, true)
-            else
-                util.toast("Already running")
+            local folderName = string.match(file, '([^\\]+)$')
+            local folderFiles = filesystem.list_files(file)
+            if #folderFiles ~= 0 then
+                local ghostFolder = menu.list(savedGhost, folderName)
+                table.insert(ghostRefs, ghostFolder)
+                for folderFiles as save do
+                    showGhost(ghostFolder, save, file)
+                end
             end
-        end)
-
-        menu.action(_, "Play in race", {"ghostplayrace" .. filename}, "Play the selected run in a race\nHORN OR LOOK BEHIND BUTTON TO END RUN", function()
-            if not ghostRunning then
-                playGhost(filename, false, true)
-            else
-                util.toast("Already running")
-            end
-        end)
-    
-        -- pause
-        menu.toggle(_, "Pause", {"ghostpause" .. filename}, "Pause active run", function()
-            if ghostRunning and playing == filename then
-                ghostPause = not ghostPause
-            else
-                util.toast("Nothing to pause")
-            end
-        end, false)
-    
-        -- tp to start
-        menu.action(_, "TP to start", {"ghosttp" .. filename}, "Teleport to start of saved ghost", function()
-            -- open file
-            local ghost = io.open(ghostDir .. filename .. ".txt", r)
-            local lines = {}
-            for line in ghost:lines() do
-                table.insert(lines, line)
-            end
-    
-            -- set coord and rotation if in vehicle to match start
-            PED.SET_PED_COORDS_KEEP_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), lines[115], lines[116], lines[117])
-            ENTITY.SET_ENTITY_ROTATION(get_user_car_id(), lines[118], lines[119], lines[120], 2, 1)
-    
-            -- close file
-            ghost:close()
-        end)
-    
-        -- delete ghost
-        deleteGhost = menu.list(_, "Delete")
-        menu.action(deleteGhost, "Delete", {"ghostdelete" .. filename}, "Delete the selected ghost, no take backs", function()
-            if not ghostRunning then
-                os.remove(ghostDir .. filename .. ".txt")
-                util.toast("Deleted")
-                refreshGhosts()
-            else
-                util.toast("Cannot delete while running")
-            end
-        end)
+        end
+    end
+    if #files ~= 0 then
+        local fileDivider = menu.divider(savedGhost, "Files")
+        for files as save do
+            showGhost(savedGhost, save, "")
+        end
+        table.insert(ghostRefs, fileDivider)
     end
 end
-
--- load inital ghosts
-listGhosts()
 
 -- function to reload ghosts after saving new or deleting
 function refreshGhosts()
     -- remove currently listed ghosts
-    for _, ref in ghostRefs do
+    for ghostRefs as ref do
         menu.delete(ref)
     end
 
     -- remove refs from ref list
-    for i = #ghostRefs, 1, -1 do
-        table.remove(ghostRefs, i)
-    end
+    ghostRefs = {}
 
     -- refresh ghosts
     listGhosts()
 end
 
-
 -- ghost settings ----------------------------------------------------------------------------------------------------------------------------------------------------
+function ghostRunning()
+    for ghosts as ghost do
+        if ghost.running then
+            return true
+        end
+    end
+    return false
+end
+
+menu.toggle(ghostSettings, "Pause All", {"ghostpauseallcb"}, "Pause all active runs", function()
+    if ghostRunning() then
+        for ghosts as ghost do
+            if ghost.running then
+                ghost.pause = not ghost.pause
+                if ghost.pause then
+                    ENTITY.FREEZE_ENTITY_POSITION(ghost.ghostCar, true)
+                else
+                    ENTITY.FREEZE_ENTITY_POSITION(ghost.ghostCar, false)
+                end
+            end
+        end
+    else
+        util.toast("Nothing to pause")
+        menu.trigger_commands("ghostpauseallcb off")
+    end
+end, false)
 
 menu.toggle(ghostSettings, "Spawn Stig", {"ghostspawnstigcb"}, "Spawn lightning fast driver in ghost car", function(on, click)
-    if ghostRunning then
+    if ghostRunning() then
         util.toast("Cannot change while running")
         if click != CLICK_SCRIPTED and on then
             menu.trigger_commands("ghostspawnstigcb off")
@@ -3775,7 +3860,7 @@ menu.slider(ghostSettings, "Playback Speed (Higher = Slower)", {"ghostspeedcb"},
 end)
 
 menu.toggle(ghostSettings, "Show Inputs", {"ghostshowinputcb"}, "Ghost neon will show gas or brake", function(on, click)
-    if ghostRunning then
+    if ghostRunning() then
         util.toast("Cannot change while running")
         if click != CLICK_SCRIPTED and on then
             menu.trigger_commands("ghostshowinputcb off")
@@ -3789,7 +3874,7 @@ menu.toggle(ghostSettings, "Show Inputs", {"ghostshowinputcb"}, "Ghost neon will
 end, true)
 
 menu.toggle(ghostSettings, "Enable Collision", {"ghostcollisioncb"}, "Enable ghost car collision", function(on, click)
-    if ghostRunning then
+    if ghostRunning() then
         util.toast("Cannot change while running")
         if click != CLICK_SCRIPTED and on then
             menu.trigger_commands("ghostcollisioncb off")
@@ -3798,12 +3883,12 @@ menu.toggle(ghostSettings, "Enable Collision", {"ghostcollisioncb"}, "Enable gho
         end
         return
     else
-        enableCollision = not enableCollision
+        ghostCollision = not ghostCollision
     end
 end)
 
 menu.toggle(ghostSettings, "Spawn in ghost", {"ghostspawninsidecb"}, "Spawn inside the ghost car to watch", function(on, click)
-    if ghostRunning then
+    if ghostRunning() then
         util.toast("Cannot change while running")
         if click != CLICK_SCRIPTED and on then
             menu.trigger_commands("ghostspawninsidecb off")
@@ -3816,25 +3901,23 @@ menu.toggle(ghostSettings, "Spawn in ghost", {"ghostspawninsidecb"}, "Spawn insi
     end
 end)
 
+menu.action(ghostSettings, "Open ghosts folder", {"openghostscb"}, "Open the folder where your ghosts are saved", function()
+    util.open_folder(ghostDir)
+end)
 
-
+menu.action(ghostSettings, "Refresh files", {"refreshghostscb"}, "Loads any changes you have made in the ghosts folder", function()
+    if not ghostRunning() then
+        refreshGhosts()
+    else
+        util.toast("Cannot refresh while a ghost is running")
+    end
+end)
 
 local ghostTest = menu.list(ghostSettings, "Experimental (might break)")
 
-menu.slider(ghostTest, "Fast Forward / Rewind", {"ghostfastforwardcb"}, "Fast forward the currently playing ghost", -10, 10, 1, 1, function(val)
+menu.slider(ghostTest, "Fast Forward / Rewind", {"ghostfastforwardcb"}, "Fast forward/rewind the currently playing ghost", -10, 10, 0, 1, function(val)
     fastForward = val
 end)
-
-menu.toggle(ghostTest, "Pause", {"ghostpausecb"}, "Pause active run", function()
-    if ghostRunning and playing == filename then
-        ghostPause = not ghostPause
-    else
-        util.toast("Nothing to pause")
-        menu.trigger_commands("ghostpausecb off")
-    end
-end, false)
-
-
 ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -4001,21 +4084,32 @@ function saveVeh(veh, temp)
     return cloneTune
 end
 
-function spawnVeh(cloneTune, temp)
+function spawnVeh(cloneTune, temp, ghost)
+    if ghost then
+        cloneTune = ghost.car
+    end
     local veh = cloneTune.hash
     local cloneVeh
     STREAMING.REQUEST_MODEL(veh)
     while not STREAMING.HAS_MODEL_LOADED(veh) do
         util.yield_once()
     end
-    if temp then
+    if ghost and temp then
+        for ghost as data do
+            if data.count == 1 then
+                cloneVeh = VEHICLE.CREATE_VEHICLE(veh, data.pos.x, data.pos.y, data.pos.z, data.rot.z, 1, 0, 0)
+            end
+        end
+    elseif temp then
         cloneVeh = VEHICLE.CREATE_VEHICLE(veh, cloneTune.coord.x, cloneTune.coord.y, cloneTune.coord.z, ENTITY.GET_ENTITY_HEADING(players.user_ped()), 1, 0, 0)
     else
         local pos = players.get_position(players.user())
         cloneVeh = VEHICLE.CREATE_VEHICLE(veh, pos.x, pos.y, pos.z, ENTITY.GET_ENTITY_HEADING(players.user_ped()), 1, 0, 0)
     end
     VEHICLE.SET_VEHICLE_MOD_KIT(cloneVeh, 0)
-    PED.SET_PED_INTO_VEHICLE(players.user_ped(), cloneVeh, -1)
+    if not ghost then
+        PED.SET_PED_INTO_VEHICLE(players.user_ped(), cloneVeh, -1)
+    end
     local custom = false
     if cloneTune.wheelvar1 or cloneTune.wheelvar2 then
         custom = true
@@ -4066,11 +4160,33 @@ function spawnVeh(cloneTune, temp)
     end
     VEHICLE.SET_VEHICLE_HAS_BEEN_OWNED_BY_PLAYER(cloneVeh, true)
 
-    if temp then
+    if temp and not ghost then
         entities.set_rpm(entities.handle_to_pointer(cloneVeh), cloneTune.rpm)
         entities.set_current_gear(entities.handle_to_pointer(cloneVeh), cloneTune.gear)
         ENTITY.SET_ENTITY_VELOCITY(cloneVeh, cloneTune.vel.x, cloneTune.vel.y, cloneTune.vel.z)
         VEHICLE.SET_VEHICLE_FORWARD_SPEED(cloneVeh, cloneTune.speed)
+    end
+
+    if ghost then
+        -- set license plate
+        VEHICLE.SET_VEHICLE_NUMBER_PLATE_TEXT(cloneVeh, "GHOST")
+
+        -- set opacity
+        ENTITY.SET_ENTITY_ALPHA(cloneVeh, ghostAlpha, 0)
+
+        -- dont blow up ideally
+        ENTITY.SET_ENTITY_INVINCIBLE(cloneVeh, true)
+        VEHICLE.SET_VEHICLE_CAN_BE_VISIBLY_DAMAGED(cloneVeh, true)
+
+        -- enable collision
+        if not ghostCollision then
+            ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(get_user_car_id(), cloneVeh, 0, 1)
+        end
+
+        entities.set_can_migrate(cloneVeh, false)
+
+        -- freeze position (prevents stig from driving away when paused)
+        ENTITY.FREEZE_ENTITY_POSITION(cloneVeh, true) 
     end
 
     return cloneVeh
@@ -4253,12 +4369,13 @@ end)
 
 -- cleanup on stop
 util.on_pre_stop(function()
-	if ghostCar ~= nil then
-        entities.delete_by_handle(ghostCar)
-    end
-
-    if stig ~= nil then
-        entities.delete_by_handle(stig)
+    for ghosts as ghost do
+        if ghost.ghostCar ~= nil then
+            entities.delete_by_handle(ghost.ghostCar)
+        end
+        if ghost.stig ~= nil then
+            entities.delete_by_handle(ghost.stig)
+        end
     end
 
     if startCar ~= nil then
@@ -4350,6 +4467,7 @@ util.yield(1000)
 if onFoot() then
     refreshTunes()
 end
+refreshGhosts()
 
 -- idk keeps stuff running?
 util.keep_running()
