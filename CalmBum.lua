@@ -1437,9 +1437,9 @@ end)
 --Drift Smoke------------------------------------------------------------------------------------------------------------------------------------------------
 local driftsm = menu.list(effectsList, "Drift Smoke")
 local enable_rear_smoke = true
-local enable_front_smoke = true
+local enable_front_smoke = false
 local rear_smoke_size = 0.15
-local front_smoke_size = 0.07
+local front_smoke_size = 0
 
 menu.toggle_loop(driftsm, "Enable Drift Smoke", {"driftsmokecb"}, "Clouds bro, clouds", function()
     local rear_effect = {"scr_recartheft", "scr_wheel_burnout", rear_smoke_size}
