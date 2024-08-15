@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2.5"
+local SCRIPT_VERSION = "7.2.6"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -2620,6 +2620,43 @@ menu.action(playerList, "Take A Shit", {"shitcb"}, "You see that ugly ass car? G
         local object_ = OBJECT.CREATE_OBJECT(MISC.GET_HASH_KEY("prop_big_shit_02"), players.get_position(players.user()).x, players.get_position(players.user()).y, players.get_position(players.user()).z - 0.6, true, true)
         NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(object_)
         ENTITY.APPLY_FORCE_TO_ENTITY(object_, 3, 0, 0, -10, 0, 0, 0, 0, false)
+    end
+end)
+
+menu.action(playerList, "Extra Muddy Poo", {"shitmudcb"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
+    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+    if not PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
+        STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
+        while not STREAMING.HAS_ANIM_DICT_LOADED("missfbi3ig_0") do
+            util.yield(0)
+        end
+        TASK.TASK_PLAY_ANIM(targetPed, "missfbi3ig_0", "shit_loop_trev", 8.0, 8.0, 2000, 0, 0, false, false, false)
+        
+        util.yield(500)
+        
+        local bone = PED.GET_PED_BONE_INDEX(targetPed, 11816)
+        STREAMING.REQUEST_NAMED_PTFX_ASSET("core")
+        while not STREAMING.HAS_NAMED_PTFX_ASSET_LOADED("core") do
+            util.yield(0)
+        end
+        GRAPHICS.USE_PARTICLE_FX_ASSET("core")
+        GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
+            "ent_sht_petrol",
+            targetPed,
+            0.0, 0.01, 0,
+            90.0, 45, 0.0,
+            bone,
+            1.0,
+            false, false, false
+        )
+        
+        util.yield(500)
+        
+        local pos = ENTITY.GET_ENTITY_COORDS(targetPed)
+        local object_ = OBJECT.CREATE_OBJECT(MISC.GET_HASH_KEY("prop_big_shit_02"), pos.x, pos.y, pos.z - 0.6, true, true)
+        NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(object_)
+        ENTITY.SET_ENTITY_DYNAMIC(object_, true)
+        ENTITY.APPLY_FORCE_TO_ENTITY(object_, 1, 0, 0, -10, 0, 0, 0, 0, false, false, true, false, true)
     end
 end)
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
