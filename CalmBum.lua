@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2.4"
+local SCRIPT_VERSION = "7.2.5"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -2084,7 +2084,7 @@ end)
 local rewind = false
 local rewindData = {}
 
-menu.toggle_loop(miscList, "Oh shit/Rewind", {"rewindcb"}, "Press once to become a ghost temporarily\nHold down to rewind\nCinematic camera (B/Circle/R) to activate\nThis will disable cinematic camera when on", function()
+menu.toggle_loop(miscList, "Oh shit/Rewind", {"ohshitcb"}, "Press once to become a ghost temporarily\nHold down to rewind\nCinematic camera (B/Circle/R) to activate\nHold brake during rewind to pause\nThis will disable cinematic camera when on", function()
     if onFoot() then
         util.yield(500)
     end
@@ -2164,7 +2164,7 @@ function recordRewind()
         data.input = 4
     end
 
-    if table.getn(rewindData) < 1000 then
+    if table.getn(rewindData) < 1000000 then
         table.insert(rewindData, data)
     else
         table.remove(rewindData, 1)
@@ -2177,7 +2177,26 @@ end
 local rewindCount = 0
 
 function runRewind(data, last)
+    if onFoot() then
+        return
+    end
+
     local veh = get_user_car_id()
+
+    while PAD.IS_CONTROL_PRESSED(72, 72) and !last do
+        if onFoot() then
+            return
+        end
+        entities.set_rpm(entities.handle_to_pointer(veh), data.extra.rpm)
+        entities.set_current_gear(entities.handle_to_pointer(veh), data.extra.gear)
+        ENTITY.FREEZE_ENTITY_POSITION(veh, true)
+        util.yield_once()
+    end
+
+    if PAD.IS_CONTROL_JUST_RELEASED(72, 72) then
+        ENTITY.FREEZE_ENTITY_POSITION(veh, false)
+        VEHICLE.SET_VEHICLE_ENGINE_ON(veh, true, true, false)
+    end
 
     local targetPos = {x = data.pos.x, y = data.pos.y, z = data.pos.z}
     local oldPos = ENTITY.GET_ENTITY_COORDS(veh)
@@ -2214,6 +2233,8 @@ function runRewind(data, last)
     elseif last then
         rewindCount -= 1
         if rewindCount == 0 then
+            VEHICLE.SET_VEHICLE_ENGINE_ON(veh, true, true, false)
+            entities.set_rpm(entities.handle_to_pointer(veh), data.extra.rpm)
             entities.set_current_gear(entities.handle_to_pointer(veh), data.extra.gear)
         end
     end
@@ -2231,7 +2252,7 @@ util.create_tick_handler(function()
         resettingCar = true
         NETWORK.SET_LOCAL_PLAYER_AS_GHOST(true, true)
         util.yield(300)
-        while PAD.IS_DISABLED_CONTROL_PRESSED(80, 80) do
+        while PAD.IS_DISABLED_CONTROL_PRESSED(80, 80) and !onFoot() do
             rewinding = true
             if table.getn(rewindData) > 50 then
                 runRewind(rewindData[table.getn(rewindData) - rewindCount])
@@ -2241,7 +2262,7 @@ util.create_tick_handler(function()
             util.yield(1)
         end
         ENTITY.FREEZE_ENTITY_POSITION(get_user_car_id(), false)
-        if rewinding then
+        if rewinding and !onFoot() then
             for i = rewindCount - 1, 0, -1 do
                 runRewind(rewindData[table.getn(rewindData) - i], true)
                 table.remove(rewindData, table.getn(rewindData) - i)
