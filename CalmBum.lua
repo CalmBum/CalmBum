@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2.3"
+local SCRIPT_VERSION = "7.2.4"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -1508,7 +1508,6 @@ menu.slider(driftsm, "Front Smoke Size", {"driftsmokefrontcb"}, "Set front smoke
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
 --NOS purge------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --To add--
 --Bone location chooser--
@@ -2080,32 +2079,38 @@ menu.toggle_loop(overlay, "Button Pressure Overlay" , {"pressureoverlaycb"}, "Gi
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
--- oh shit button ----------------------------------------------------------------------------------------------------------------------------------------------
+-- oh shit button / rewind ----------------------------------------------------------------------------------------------------------------------------------------------
 
-local resettingCar = false
-local resetCheck = false
+local rewind = false
+local rewindData = {}
 
-menu.toggle(miscList, "Oh shit button", {"ohshitcb"}, "When enabled pressing B/Circle/R will make your car a ghost, useful when you are about to ruin a tandem :P\nThis will disable cinematic cam while on", function(on)
-    if on then
-        resetCheck = true
-        menu.trigger_commands("disablevehcincam On")
-    else
-        resetCheck = false
-        menu.trigger_commands("disablevehcincam Off")
+menu.toggle_loop(miscList, "Oh shit/Rewind", {"rewindcb"}, "Press once to become a ghost temporarily\nHold down to rewind\nCinematic camera (B/Circle/R) to activate\nThis will disable cinematic camera when on", function()
+    if onFoot() then
+        util.yield(500)
     end
+    if !rewind then
+        menu.trigger_commands("disablevehcincam On")
+    end
+    rewind = true
+    while !onFoot() and !rewinding do
+        recordRewind()
+    end
+end, function()
+    rewind = false
+    menu.trigger_commands("disablevehcincam Off")
 end)
 
 function getNearbyEntities(ped, maxVehicles, maxPeds)
     local vehiclesList = {}
     local pedsList = {}
-    if maxVehicles ~= 0 then
+    if maxVehicles ~= nil then
         local vehicleList = memory.alloc((maxVehicles + 1) * 8)
         memory.write_int(vehicleList, maxVehicles)
         for i = 1, PED.GET_PED_NEARBY_VEHICLES(ped, vehicleList) do
             vehiclesList[i] = memory.read_int(vehicleList + i*8)
         end
     end
-    if maxPeds ~= 0 then
+    if maxPeds ~= nil then
         local pedList = memory.alloc((maxPeds + 1) * 8)
         memory.write_int(pedList, maxPeds)
         for i = 1, PED.GET_PED_NEARBY_PEDS(ped, pedList, -1) do
@@ -2115,38 +2120,161 @@ function getNearbyEntities(ped, maxVehicles, maxPeds)
 	return vehiclesList, pedsList
 end
 
-function resetCar()
-    resettingCar = true
-    NETWORK.SET_LOCAL_PLAYER_AS_GHOST(true, true)
-    util.yield(3000)
-    NETWORK.SET_LOCAL_PLAYER_AS_GHOST(false, true)
-    resettingCar = false
+function recordRewind()
+    local veh = get_user_car_id()
+    local data = {
+        pos = {
+            x,
+            y,
+            z
+        },
+        rot = {
+            x = ENTITY.GET_ENTITY_ROTATION(veh, 5).x,
+            y = ENTITY.GET_ENTITY_ROTATION(veh, 4).y,
+            z = ENTITY.GET_ENTITY_ROTATION(veh, 2).z
+        },
+        camPitch = CAM.GET_GAMEPLAY_CAM_RELATIVE_PITCH(),
+        camHead = CAM.GET_GAMEPLAY_CAM_RELATIVE_HEADING(),
+        input,
+        steer = PAD.GET_CONTROL_NORMAL(146, 146),
+        extra = {
+            rpm = entities.get_rpm(entities.get_user_vehicle_as_pointer()),
+            gear = entities.get_current_gear(entities.get_user_vehicle_as_pointer()),
+            speed = ENTITY.GET_ENTITY_SPEED(veh)
+        },
+    }
+
+    local pos = ENTITY.GET_ENTITY_COORDS(veh)
+    data.pos.x = pos.x
+    data.pos.y = pos.y
+    data.pos.z = pos.z
+
+    -- record input (for neon and idk maybe other stuff in future)
+    -- brake
+    if PAD.IS_CONTROL_PRESSED(72, 72) then
+        data.input = 1
+    -- gas
+    elseif PAD.IS_CONTROL_PRESSED(71, 71) then
+        data.input = 2
+    -- ebrake
+    elseif PAD.IS_CONTROL_PRESSED(76, 76) then
+        data.input = 3
+    -- none
+    else
+        data.input = 4
+    end
+
+    if table.getn(rewindData) < 1000 then
+        table.insert(rewindData, data)
+    else
+        table.remove(rewindData, 1)
+        table.insert(rewindData, data)
+    end
+
+    util.yield_once()
+end
+
+local rewindCount = 0
+
+function runRewind(data, last)
+    local veh = get_user_car_id()
+
+    local targetPos = {x = data.pos.x, y = data.pos.y, z = data.pos.z}
+    local oldPos = ENTITY.GET_ENTITY_COORDS(veh)
+    local vel = {
+        x = ((targetPos.x - oldPos.x) * 10),
+        y = ((targetPos.y - oldPos.y) * 10),
+        z = ((targetPos.z - oldPos.z) * 10)
+    }
+    local targetRot = {x = data.rot.x, y = data.rot.y, z = data.rot.z}
+    local oldRot5 = ENTITY.GET_ENTITY_ROTATION(veh, 5)
+    local oldRot4 = ENTITY.GET_ENTITY_ROTATION(veh, 4)
+    local oldRot2 = ENTITY.GET_ENTITY_ROTATION(veh, 2)
+    local velR = {
+        x = (targetRot.x - oldRot5.x),
+        y = (targetRot.y - oldRot4.y),
+        z = (targetRot.z - oldRot2.z)
+    }
+    ENTITY.SET_ENTITY_VELOCITY(veh, vel.x, vel.y, vel.z)
+    ENTITY.SET_ENTITY_ANGULAR_VELOCITY(veh, velR.x, velR.y, velR.z)
+
+    local steerAngle = data.steer * -0.14
+    VEHICLE.SET_VEHICLE_STEER_BIAS(veh, steerAngle)
+    entities.set_rpm(entities.handle_to_pointer(veh), data.extra.rpm)
+
+    CAM.SET_GAMEPLAY_CAM_RELATIVE_PITCH(data.camPitch, 1)
+    CAM.SET_GAMEPLAY_CAM_RELATIVE_HEADING(data.camHead)
+
+    if rewindCount < 50 and !last then
+        rewindCount += 1
+    end
+
+    if table.getn(rewindData) > 50 and !last and rewindCount == 50 then
+        table.remove(rewindData, table.getn(rewindData))
+    elseif last then
+        rewindCount -= 1
+        if rewindCount == 0 then
+            entities.set_current_gear(entities.handle_to_pointer(veh), data.extra.gear)
+        end
+    end
 end
 
 util.create_tick_handler(function()
-    if onFoot() then
+    if onFoot() or !rewind then
+        if table.getn(rewindData) > 1 then
+            rewindData = {}
+        end
         return
     end
 
-    if resetCheck then
-        if !HUD.IS_MP_TEXT_CHAT_TYPING() and PAD.IS_DISABLED_CONTROL_JUST_PRESSED(80, 80) then
-            resetCar()
+    if !HUD.IS_MP_TEXT_CHAT_TYPING() and PAD.IS_DISABLED_CONTROL_JUST_PRESSED(80, 80) then
+        resettingCar = true
+        NETWORK.SET_LOCAL_PLAYER_AS_GHOST(true, true)
+        util.yield(300)
+        while PAD.IS_DISABLED_CONTROL_PRESSED(80, 80) do
+            rewinding = true
+            if table.getn(rewindData) > 50 then
+                runRewind(rewindData[table.getn(rewindData) - rewindCount])
+            else
+                ENTITY.FREEZE_ENTITY_POSITION(get_user_car_id(), true)
+            end
+            util.yield(1)
         end
+        ENTITY.FREEZE_ENTITY_POSITION(get_user_car_id(), false)
+        if rewinding then
+            for i = rewindCount - 1, 0, -1 do
+                runRewind(rewindData[table.getn(rewindData) - i], true)
+                table.remove(rewindData, table.getn(rewindData) - i)
+                util.yield(1)
+            end
+            rewindData = {}
+        end
+        rewindCount = 0
+        if !rewinding then
+            util.yield(2700)
+        end
+        rewinding = false
+        NETWORK.SET_LOCAL_PLAYER_AS_GHOST(false, true)
+        resettingCar = false
     end
 end)
 
 util.create_tick_handler(function()
-    if onFoot() then
+    if onFoot() or !resettingCar then
         return
     end
     
-    if resettingCar then
-        local vehs, peds = getNearbyEntities(players.user_ped(), 30)
-        for vehs as veh do
-            if VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1, 0) ~= players.user_ped() then
-                CAM.SET_GAMEPLAY_CAM_IGNORE_ENTITY_COLLISION_THIS_UPDATE(get_user_car_id())
-                ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(veh, get_user_car_id(), true)
-            end
+    local vehs, peds = getNearbyEntities(players.user_ped(), 30)
+    for vehs as veh do
+        if VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1, 0) ~= players.user_ped() then
+            CAM.SET_GAMEPLAY_CAM_IGNORE_ENTITY_COLLISION_THIS_UPDATE(veh)
+            ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(veh, get_user_car_id(), true)
+        end
+    end
+    for peds as ped do
+        if ped ~= players.user_ped() then
+            CAM.SET_GAMEPLAY_CAM_IGNORE_ENTITY_COLLISION_THIS_UPDATE(ped)
+            ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(ped, get_user_car_id(), true)
         end
     end
 end)
@@ -3147,6 +3275,7 @@ local ghostName = ""
 local showStart = false
 local startCar
 local raceGhost = false
+local recordingGhost = false
 
 function markerCar(vehHash, veh)
     -- spawn car from hash
@@ -3235,7 +3364,7 @@ function recordGhost(ghost, veh, ghostFile)
     ghostFile:write('"' .. ghostCount .. '": ' .. json.stringify(data, nil, 4) .. ",\n")
     ghostCount += 1
 
-    util.yield(1)
+    util.yield_once()
     return ghostCount - 1
 end
 
@@ -3273,8 +3402,8 @@ function startGhost(ghost, veh, ghostFile)
     ghostFile:close()
 end
 
-local recordingGhost = false
-menu.text_input(newGhost, "Create new ghost", {"newghostcb"}, "Create a new ghost\nleave blank for auto name", function(input, click)
+-- create new ghost
+menu.text_input(newGhost, "Create new ghost", {"ghostnamecb"}, "Create a new ghost\nleave blank for auto name", function(input, click)
     if (click & CLICK_FLAG_AUTO) ~= 0 then
         return
     elseif onFoot() then
@@ -3284,6 +3413,7 @@ menu.text_input(newGhost, "Create new ghost", {"newghostcb"}, "Create a new ghos
         util.toast("Already running")
         return
     end
+
     ghostName = input
     local veh = get_user_car_id()
     recordingGhost = true
@@ -3435,7 +3565,8 @@ function runGhost(ghostInfo, ghost)
     local steerAngle = 0
     local steer = 5
     local i = 1
-    local length
+    local delay
+    local time
     local x, y, z
 
     for ghost as thing do
@@ -3445,6 +3576,7 @@ function runGhost(ghostInfo, ghost)
             z = thing.pos.z
         elseif type(thing.len) == "number" then
             length = thing.len
+            time = thing.time
         end
     end
     
@@ -3458,6 +3590,8 @@ function runGhost(ghostInfo, ghost)
     end
 
     ENTITY.FREEZE_ENTITY_POSITION(ghostInfo.ghostCar, false)
+
+    delay = time / length * 700
 
     while i <= length do
         for ghost as data do
@@ -3533,13 +3667,13 @@ function runGhost(ghostInfo, ghost)
                     end
                     
                     -- steering
-                    -- 0.14 seems to be max angle            this may not even be doing anything, idk im tired
+                    -- 0.14 seems to be max angle            this may not even be doing anything, idk
                     steerAngle = data.steer * -0.14
                     if spawnStig then
                         PED.SET_PED_STEER_BIAS(ghostInfo.stig, data.steer)
                     end
                     VEHICLE.SET_VEHICLE_STEER_BIAS(ghostInfo.ghostCar, steerAngle)
-                    util.yield(ghostSpeed)
+                    util.yield(delay * ghostSpeed)
                     i += 1
                     if fastForward ~= 0 then
                         if fastForward < 0 and (i + fastForward) < 1 then
@@ -4364,7 +4498,6 @@ util.create_tick_handler(function()
         outOfVeh = true
     end
 end)
-
 ------------------------------------------------------------------------------------------------------------------------------------------
 
 -- cleanup on stop
@@ -4423,7 +4556,6 @@ end
 menu.hyperlink(update_stuff, "GitHub Source", "https://github.com/CalmBum/CalmBum", "View source files on Github") 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
 --Boot up---------
 --Jackface DANCE--
 ------------------
@@ -4471,5 +4603,3 @@ refreshGhosts()
 
 -- idk keeps stuff running?
 util.keep_running()
-
---[[Can add more from here]]--
