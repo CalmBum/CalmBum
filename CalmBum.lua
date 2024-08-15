@@ -1498,7 +1498,7 @@ menu.slider(driftsm, "Rear Smoke Size", {"driftsmokerearcb"}, "Set rear smoke si
     end
 end)
 
-menu.slider(driftsm, "Front Smoke Size", {"driftsmokefrontcb"}, "Set front smoke size\n0 to disable", 0, 10, 5, 1, function(val)
+menu.slider(driftsm, "Front Smoke Size", {"driftsmokefrontcb"}, "Set front smoke size\n0 to disable", 0, 10, 0, 1, function(val)
     if val == 0 then
         enable_front_smoke = false
     else
