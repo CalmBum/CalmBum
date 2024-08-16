@@ -430,7 +430,7 @@ function getCurrentGears()
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
     else
-        for i = 0, (gears + 2) do
+        for i = 0, (gears + 1) do
             table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
         end
     end
