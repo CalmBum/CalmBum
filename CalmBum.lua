@@ -425,7 +425,7 @@ function gearList()
 end
 
 function getCurrentGears()
-    local gears = math.floor(memory.read_int(adr + 0x50))
+    local gears = memory.read_int(adr + 0x50)
     if gears == 1 or gears == 0 then
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
