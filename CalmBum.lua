@@ -2092,7 +2092,7 @@ menu.toggle_loop(miscList, "Oh shit/Rewind", {"ohshitcb"}, "Press once to become
         menu.trigger_commands("disablevehcincam On")
     end
     rewind = true
-    while !onFoot() and !rewinding do
+    while !onFoot() and !rewinding and VEHICLE.GET_PED_IN_VEHICLE_SEAT(get_user_car_id(), -1, false) == players.user_ped() do
         recordRewind()
     end
 end, function()
@@ -2241,7 +2241,7 @@ function runRewind(data, last)
 end
 
 util.create_tick_handler(function()
-    if onFoot() or !rewind then
+    if onFoot() or !rewind or VEHICLE.GET_PED_IN_VEHICLE_SEAT(get_user_car_id(), -1, false) ~= players.user_ped() then
         if table.getn(rewindData) > 1 then
             rewindData = {}
         end
@@ -4579,9 +4579,10 @@ util.on_pre_stop(function()
 
     if menu.get_value(gearSlider) ~= 0 then
         memory.write_float(adr + 0x50, stockGears)
-        SetFlags(true)
+        if VEHICLE.GET_PED_IN_VEHICLE_SEAT(get_user_car_id(), -1, false) == players.user_ped() then
+            SetFlags(true)
+        end
     end
-
     if table.getn(stockHandling) ~= 0 then
         acceleration(0, 0)
         if !handlingPersist then
