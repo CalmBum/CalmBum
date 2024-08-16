@@ -425,12 +425,12 @@ function gearList()
 end
 
 function getCurrentGears()
-    local gears = math.floor(memory.read_float(adr + 0x50) / 1e-45)
+    local gears = math.floor(memory.read_int(adr + 0x50))
     if gears == 1 or gears == 0 then
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
     else
-        for i = 0, (math.floor(memory.read_float(adr + 0x50) / 1e-45) - 1) do
+        for i = 0, (gears - 1) do
             table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
         end
     end
@@ -564,7 +564,7 @@ gearSlider = menu.slider(tuneList, "Gears", {"setgearscb"}, "Set number of gears
         return
     end
 
-    local val = num * 1e-45
+    local val = num
 
     if num == 1 then
         val = 0
@@ -572,7 +572,7 @@ gearSlider = menu.slider(tuneList, "Gears", {"setgearscb"}, "Set number of gears
         val = stockGears
     end
 
-    memory.write_float(adr + 0x50, val)
+    memory.write_int(adr + 0x50, val)
 
     SetFlags()
     removeGears()
@@ -859,12 +859,12 @@ function loadTune(tuneFile, withCar, loadAll)
         elseif tune.calmbum[i].name == "Gears" then
             local num = tune.calmbum[i].value
             if menu.get_value(gearSlider) ~= num then
-                local val = num * 1e-45
+                local val = num
                 if num == 1 then
                     val = 0
                 end
                 if num ~= 0 then
-                    memory.write_float(adr + 0x50, val)
+                    memory.write_int(adr + 0x50, val)
                     needReset = true
                 end
                 menu.set_value(gearSlider, tune.calmbum[i].value)
@@ -4464,7 +4464,7 @@ function resetVeh()
     driveBias = -1
     accelValDisplay = 0
     if stockGears ~= nil then
-        memory.write_float(adr + 0x50, stockGears)
+        memory.write_int(adr + 0x50, stockGears)
         stockGears = nil
     end
     if !handlingPersist then
@@ -4511,7 +4511,7 @@ function setNewVeh()
         memory.write_int(subAdr + 0x003C, ClearBit(memory.read_int(subAdr + 0x003C), 1 << 16))
     end
     if stockGears == nil then
-        stockGears = memory.read_float(adr + 0x50)
+        stockGears = memory.read_int(adr + 0x50)
         menu.set_value(gearSlider, 0)
     end
     if driveBias == -1 then
@@ -4534,7 +4534,7 @@ end
 local outOfVeh = false
 
 util.create_tick_handler(function()
-    if !onFoot() and !loadingTune then
+    if !onFoot() and !loadingTune and NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         if curVeh == VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user())) then
             if outOfVeh == true then
                 refreshHandling()
@@ -4576,7 +4576,7 @@ util.on_pre_stop(function()
     end
 
     if menu.get_value(gearSlider) ~= 0 then
-        memory.write_float(adr + 0x50, stockGears)
+        memory.write_int(adr + 0x50, stockGears)
         if NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
             SetFlags(true)
         end
