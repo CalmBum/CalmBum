@@ -1341,7 +1341,7 @@ local clutchStop = false
 local brakeForceTemp = nil
 
 menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled your car will not apply the brakes when on throttle while moving backwards.\nThis makes backies somewhat more achievable.\nRecommend using with clutch for most control.", function()
-    if onFoot() then
+    if onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         if brakeForceTemp ~= nil then
             brakeForceTemp = nil
         end
@@ -1393,7 +1393,7 @@ end)
 
 --Drift Cam Assist------------------------------------------------------------------------------------------------------------------------------------------------
 menu.toggle_loop(tuningList, "Drift Cam Assist", {"driftcamcb"}, "Prevents the camera from going crazy every time you tap ebrake", function()
-    if onFoot() then
+    if onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         return
     end
     local moving = ENTITY.GET_ENTITY_SPEED(get_user_car_id())
@@ -1410,7 +1410,7 @@ local clutchCounter = 0
 
 menu.toggle_loop(tuningList, "Auto Clutch Kick", {"autoclutchkickcb"}, "Every time you hit the gas this will clutch kick for you (mostly)\nThis is not the same as enabling the clutch, this is for GTA's built in clutch kicking equivalent", function()
     local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_JUST_PRESSED(71, 71) and (math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).x) > 10 or math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).y) > 10) then
+    if NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) and PAD.IS_CONTROL_JUST_PRESSED(71, 71) and (math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).x) > 10 or math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).y) > 10) then
         clutchKicked = true
     end
 end)
@@ -1647,7 +1647,7 @@ local delayCir = 100
 local colourCir = {colour = {r = 0, g = 1, b = 0, a = 1}}
 
 function circleRgb()
-    if onFoot() then
+    if onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         return
     end
     runningCir = true
@@ -1745,7 +1745,7 @@ local backFd = false
 local vehFd
 
 menu.toggle_loop(effectsList, "FD Lights", {"fdlightcb"}, "Show accel/decel with neon", function()
-    if !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false) then
+    if !onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         -- if not in vehicle just sit and wait :)
         return
     end
@@ -2085,14 +2085,12 @@ local rewind = false
 local rewindData = {}
 
 menu.toggle_loop(miscList, "Oh shit/Rewind", {"ohshitcb"}, "Press once to become a ghost temporarily\nHold down to rewind\nCinematic camera (B/Circle/R) to activate\nHold brake during rewind to pause\nThis will disable cinematic camera when on", function()
-    if onFoot() then
-        util.yield(500)
-    end
+    util.yield(1000)
     if !rewind then
         menu.trigger_commands("disablevehcincam On")
     end
     rewind = true
-    while !onFoot() and !rewinding and VEHICLE.GET_PED_IN_VEHICLE_SEAT(get_user_car_id(), -1, false) == players.user_ped() do
+    while !onFoot() and !rewinding and NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) do
         recordRewind()
     end
 end, function()
@@ -2164,7 +2162,7 @@ function recordRewind()
         data.input = 4
     end
 
-    if table.getn(rewindData) < 1000000 then
+    if table.getn(rewindData) < 100000 then
         table.insert(rewindData, data)
     else
         table.remove(rewindData, 1)
@@ -2241,7 +2239,7 @@ function runRewind(data, last)
 end
 
 util.create_tick_handler(function()
-    if onFoot() or !rewind or VEHICLE.GET_PED_IN_VEHICLE_SEAT(get_user_car_id(), -1, false) ~= players.user_ped() then
+    if onFoot() or !rewind or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
         if table.getn(rewindData) > 1 then
             rewindData = {}
         end
@@ -4579,7 +4577,7 @@ util.on_pre_stop(function()
 
     if menu.get_value(gearSlider) ~= 0 then
         memory.write_float(adr + 0x50, stockGears)
-        if VEHICLE.GET_PED_IN_VEHICLE_SEAT(get_user_car_id(), -1, false) == players.user_ped() then
+        if NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
             SetFlags(true)
         end
     end
