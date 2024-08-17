@@ -3627,7 +3627,7 @@ end
 
 util.create_tick_handler(function()
     -- this currently only works if stig is spawned and still does a weird half collision push thing with players
-    if stopCollision then
+    if stopCollision and stopCollision.stig ~= nil then
         local vehs, peds = getNearbyEntities(stopCollision.stig, 30, 30)
         for vehs as veh do
             if VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1, 0) ~= players.user_ped() then
