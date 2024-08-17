@@ -2240,7 +2240,23 @@ function runRewind(data, last)
         z = (targetRot.z - oldRot2.z)
     }
     ENTITY.SET_ENTITY_VELOCITY(veh, vel.x, vel.y, vel.z)
-    ENTITY.SET_ENTITY_ANGULAR_VELOCITY(veh, velR.x, velR.y, velR.z)
+    if velR.x > 300 then
+        velR.x -= 360
+    elseif velR.x < -300 then
+        velR.x += 360
+    end
+    if velR.y > 300 then
+        velR.y -= 360
+    elseif velR.y < -300 then
+        velR.y += 360
+    end
+    if velR.z > 300 then
+        velR.z -= 360
+    elseif velR.z < -300 then
+        velR.z += 360
+    end
+    ENTITY.SET_ENTITY_VELOCITY(veh, vel.x, vel.y, vel.z)
+    ENTITY.SET_ENTITY_ANGULAR_VELOCITY(veh, velR.x / 10, velR.y / 10, velR.z / 10)
 
     local steerAngle = data.steer * -0.14
     VEHICLE.SET_VEHICLE_STEER_BIAS(veh, steerAngle)
