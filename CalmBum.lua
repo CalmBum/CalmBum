@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2.7"
+local SCRIPT_VERSION = "7.2.8"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -92,6 +92,14 @@ end
 
 function onFoot()
     return !PED.IS_PED_IN_ANY_VEHICLE(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false)
+end
+
+function driver()
+    if onFoot() then
+        return false
+    else
+        return VEHICLE.GET_PED_IN_VEHICLE_SEAT(get_user_car_id(), -1, false) == players.user_ped()
+    end
 end
 
 function saveNeon(veh, lights)
@@ -425,7 +433,7 @@ function gearList()
 end
 
 function getCurrentGears()
-    local gears = memory.read_int(adr + 0x50)
+    local gears = VEHICLE._GET_VEHICLE_MODEL_NUM_DRIVE_GEARS(curVeh)
     if gears == 1 or gears == 0 then
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
         table.insert(currentGears, {accel = 0, boost = 0, torque = 0})
@@ -524,7 +532,7 @@ end)
 local driveBias = -1
 
 local driveBiasSlider = menu.slider_float(tuneList, "Drive Bias", {"drivebiascb"}, "0 = RWD\n1 = FWD\nTHIS WILL RESPAWN YOUR CAR\nFor constructs, you will need to respawn the construct after having applied the bias", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() or !driver() then
         return
     end
 
@@ -560,7 +568,14 @@ end)
 local stockGears = nil
 
 gearSlider = menu.slider(tuneList, "Gears", {"setgearscb"}, "Set number of gears your car has (roughly)\nCertain changes will respawn your car in order to apply\nSet to 0 for stock\nRecommend setting to 1 for CVT", 0, 8, 0, 1, function(num, prev_val, click)
-    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+    if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() or !driver() then
+        return
+    end
+
+    local check = memory.read_int(adr + 0x50)
+    if check > 10 or check < 0 then
+        util.toast("Your game is not compatible with this method.\nI am looking for a fix, sorry.")
+        menu.set_value(gearSlider, 0)
         return
     end
 
@@ -629,8 +644,9 @@ local autoApplyTunes = {}
 local autoApplyFile <const> = filesystem.scripts_dir() .. "CalmBum\\autoapply.json"
 
 function refreshAutoTunes()
+    local removed = false
     for i = 1, table.getn(autoApplyTunes) do
-        autoApplyTunes[i] = nil
+        table.remove(autoApplyTunes, i)
     end
     local file = io.open(autoApplyFile)
     local auto, happy
@@ -646,7 +662,21 @@ function refreshAutoTunes()
             return
         end
         for auto as tune do
-            table.insert(autoApplyTunes, tune)
+            if filesystem.exists(string.gsub(tune.tune, "-", "\\")) then
+                table.insert(autoApplyTunes, tune)
+            else
+                removed = true
+                for i = 1, table.getn(auto) do
+                    if auto[i] == tune then
+                        table.remove(auto, i)
+                    end
+                end
+            end
+        end
+        if removed then
+            file = io.open(autoApplyFile, "wb")
+            file:write(json.stringify(auto, nil, 4))
+            file:close()
         end
     end
 end
@@ -734,10 +764,8 @@ handlingData =
 function saveTune(tuneFile)
     local tune = {
         calmbum = {
-            
         },
         handling = {
-
         }
     }
 
@@ -832,7 +860,7 @@ function loadTune(tuneFile, withCar, loadAll)
         end
         car = spawnVeh(tune.car)
         util.yield(200)
-        curVeh = VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user()))
+        curVeh = players.get_vehicle_model(players.user())
         resetVeh()
         clone = tune.car
         setNewVeh()
@@ -985,7 +1013,7 @@ function loadTune(tuneFile, withCar, loadAll)
         if withCar then
             util.yield(500)
             SetFlags()
-        elseif NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+        elseif driver() then
             SetFlags()
         end
     end
@@ -1274,7 +1302,7 @@ end)
 local clutchBrake = false
 
 util.create_tick_handler(function()
-    if onFoot() or adr == 0 or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+    if onFoot() or adr == 0 or !driver() then
         return
     end
 
@@ -1341,7 +1369,7 @@ local clutchStop = false
 local brakeForceTemp = nil
 
 menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled your car will not apply the brakes when on throttle while moving backwards.\nThis makes backies somewhat more achievable.\nRecommend using with clutch for most control.", function()
-    if onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+    if onFoot() or !driver() then
         if brakeForceTemp ~= nil then
             brakeForceTemp = nil
         end
@@ -1393,7 +1421,7 @@ end)
 
 --Drift Cam Assist------------------------------------------------------------------------------------------------------------------------------------------------
 menu.toggle_loop(tuningList, "Drift Cam Assist", {"driftcamcb"}, "Prevents the camera from going crazy every time you tap ebrake", function()
-    if onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+    if onFoot() or !driver() then
         return
     end
     local moving = ENTITY.GET_ENTITY_SPEED(get_user_car_id())
@@ -1410,7 +1438,7 @@ local clutchCounter = 0
 
 menu.toggle_loop(tuningList, "Auto Clutch Kick", {"autoclutchkickcb"}, "Every time you hit the gas this will clutch kick for you (mostly)\nThis is not the same as enabling the clutch, this is for GTA's built in clutch kicking equivalent", function()
     local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    if NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) and PAD.IS_CONTROL_JUST_PRESSED(71, 71) and (math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).x) > 10 or math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).y) > 10) then
+    if driver() and PAD.IS_CONTROL_JUST_PRESSED(71, 71) and (math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).x) > 10 or math.abs(ENTITY.GET_ENTITY_VELOCITY(get_user_car_id()).y) > 10) then
         clutchKicked = true
     end
 end)
@@ -1647,7 +1675,7 @@ local delayCir = 100
 local colourCir = {colour = {r = 0, g = 1, b = 0, a = 1}}
 
 function circleRgb()
-    if onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+    if onFoot() or !driver() then
         return
     end
     runningCir = true
@@ -1745,7 +1773,7 @@ local backFd = false
 local vehFd
 
 menu.toggle_loop(effectsList, "FD Lights", {"fdlightcb"}, "Show accel/decel with neon", function()
-    if !onFoot() or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+    if !onFoot() or !driver() then
         -- if not in vehicle just sit and wait :)
         return
     end
@@ -2080,7 +2108,6 @@ end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- oh shit button / rewind ----------------------------------------------------------------------------------------------------------------------------------------------
-
 local rewind = false
 local rewindData = {}
 
@@ -2090,7 +2117,7 @@ menu.toggle_loop(miscList, "Oh shit/Rewind", {"ohshitcb"}, "Press once to become
         menu.trigger_commands("disablevehcincam On")
     end
     rewind = true
-    while !onFoot() and !rewinding and NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) do
+    while !onFoot() and !rewinding and driver() do
         recordRewind()
     end
 end, function()
@@ -2239,7 +2266,7 @@ function runRewind(data, last)
 end
 
 util.create_tick_handler(function()
-    if onFoot() or !rewind or !NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+    if onFoot() or !rewind or !driver() then
         if table.getn(rewindData) > 1 then
             rewindData = {}
         end
@@ -3591,10 +3618,7 @@ function createStig(ghostInfo)
     -- make stig steer a bit to look normalish
     TASK.CLEAR_PED_TASKS(stig)
     PED.SET_PED_STAY_IN_VEHICLE_WHEN_JACKED(stig, true)
-    TASK.TASK_VEHICLE_DRIVE_WANDER(stig, ghostInfo.ghostCar, 1, 17039360)
-    PED.SET_PED_STEERS_AROUND_OBJECTS(stig, false)
-    PED.SET_PED_STEERS_AROUND_VEHICLES(stig, false)
-    PED.SET_PED_STEERS_AROUND_PEDS(stig, false)
+    TASK.TASK_VEHICLE_DRIVE_WANDER(stig, ghostInfo.ghostCar, 1, 1074528293)
     
     -- force stig to stay
     PED.SET_PED_GET_OUT_UPSIDE_DOWN_VEHICLE(stig, false)
@@ -3647,7 +3671,7 @@ function runGhost(ghostInfo, ghost)
 
     ENTITY.FREEZE_ENTITY_POSITION(ghostInfo.ghostCar, false)
 
-    delay = time / length * 700
+    delay = time / length * 690 -- nice
 
     while i <= length do
         for ghost as data do
@@ -3655,7 +3679,7 @@ function runGhost(ghostInfo, ghost)
                 while ghostInfo.pause do
                     util.yield(1)
                 end
-                if PAD.IS_CONTROL_JUST_PRESSED(79, 79) or ghostInfo.stop then
+                if PAD.IS_CONTROL_PRESSED(79, 79) or ghostInfo.stop then
                     i += length
                     util.toast("Stopped " .. ghostInfo.name)
                 else
@@ -3673,8 +3697,6 @@ function runGhost(ghostInfo, ghost)
                         y = ((targetPos.y - oldPos.y) * 10),
                         z = ((targetPos.z - oldPos.z) * 10)
                     }
-                    ENTITY.SET_ENTITY_VELOCITY(ghostInfo.ghostCar, vel.x, vel.y, vel.z)
-        
                     local targetRot = {x = rX, y = rY, z = rZ}
                     local oldRot5 = ENTITY.GET_ENTITY_ROTATION(ghostInfo.ghostCar, 5)
                     local oldRot4 = ENTITY.GET_ENTITY_ROTATION(ghostInfo.ghostCar, 4)
@@ -3684,6 +3706,14 @@ function runGhost(ghostInfo, ghost)
                         y = (targetRot.y - oldRot4.y),
                         z = (targetRot.z - oldRot2.z)
                     }
+                    
+                    if velR.z > 300 then
+                        velR.z -= 360
+                    elseif velR.z < -300 then
+                        velR.z += 360
+                    end
+
+                    ENTITY.SET_ENTITY_VELOCITY(ghostInfo.ghostCar, vel.x, vel.y, vel.z)
                     ENTITY.SET_ENTITY_ANGULAR_VELOCITY(ghostInfo.ghostCar, velR.x, velR.y, velR.z)
 
                     if showInput then
@@ -4375,8 +4405,14 @@ function spawnVeh(cloneTune, temp, ghost)
 
         entities.set_can_migrate(cloneVeh, false)
 
+        -- im not entirely sure what all this does, but with it the ghost seems to lag slightly less online, all of this could be placebo for all i know
+        NETWORK.NETWORK_SET_ENTITY_CAN_BLEND(cloneVeh, true)
+        NETWORK.SET_NETWORK_VEHICLE_MAX_POSITION_DELTA_MULTIPLIER(cloneVeh, 1000000)
+        NETWORK.NETWORK_USE_HIGH_PRECISION_BLENDING(NETWORK.NETWORK_GET_NETWORK_ID_FROM_ENTITY(cloneVeh), true)
+        NETWORK.NETWORK_ENABLE_EXTRA_VEHICLE_ORIENTATION_BLEND_CHECKS(NETWORK.NETWORK_GET_NETWORK_ID_FROM_ENTITY(cloneVeh), true)
+
         -- freeze position (prevents stig from driving away when paused)
-        ENTITY.FREEZE_ENTITY_POSITION(cloneVeh, true) 
+        ENTITY.FREEZE_ENTITY_POSITION(cloneVeh, true)
     end
 
     return cloneVeh
@@ -4511,8 +4547,11 @@ function setNewVeh()
         memory.write_int(subAdr + 0x003C, ClearBit(memory.read_int(subAdr + 0x003C), 1 << 16))
     end
     if stockGears == nil then
-        stockGears = memory.read_int(adr + 0x50)
-        menu.set_value(gearSlider, 0)
+        local check = memory.read_int(adr + 0x50)
+        if check <= 10 and check >= 0 then
+            stockGears = check
+            menu.set_value(gearSlider, 0)
+        end
     end
     if driveBias == -1 then
         local fwdBias = memory.read_float(adr + 0x48)
@@ -4534,8 +4573,8 @@ end
 local outOfVeh = false
 
 util.create_tick_handler(function()
-    if !onFoot() and !loadingTune and NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
-        if curVeh == VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user())) then
+    if !onFoot() and !loadingTune then
+        if curVeh == players.get_vehicle_model(players.user()) then
             if outOfVeh == true then
                 refreshHandling()
                 util.yield(200)
@@ -4545,9 +4584,9 @@ util.create_tick_handler(function()
             return
         end
         util.yield(500)
-        if curVeh ~= VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user())) then
+        if curVeh ~= players.get_vehicle_model(players.user()) then
             resetVeh()
-            curVeh = VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user()))
+            curVeh = players.get_vehicle_model(players.user())
             setNewVeh()
         end
     elseif onFoot() and outOfVeh == false then
@@ -4577,10 +4616,11 @@ util.on_pre_stop(function()
 
     if menu.get_value(gearSlider) ~= 0 then
         memory.write_int(adr + 0x50, stockGears)
-        if NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(get_user_car_id()) then
+        if driver() then
             SetFlags(true)
         end
     end
+    
     if table.getn(stockHandling) ~= 0 then
         acceleration(0, 0)
         if !handlingPersist then
