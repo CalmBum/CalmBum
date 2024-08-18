@@ -4606,7 +4606,7 @@ function setNewVeh()
     refreshTunes()
 end
 
-local outOfVeh = false
+local outOfVeh = true
 
 util.create_tick_handler(function()
     if !onFoot() and !loadingTune and outOfVeh == true then
