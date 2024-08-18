@@ -4609,8 +4609,9 @@ end
 local outOfVeh = false
 
 util.create_tick_handler(function()
-    if !onFoot() and !loadingTune then
-        if curVeh == players.get_vehicle_model(players.user()) and outOfVeh == true and curVeh ~= 0 then
+    if !onFoot() and !loadingTune and outOfVeh == true then
+        if curVeh == players.get_vehicle_model(players.user()) and curVeh ~= 0 then
+            util.toast("path1")
             refreshHandling()
             util.yield(200)
             acceleration(accelVal, boosties)
@@ -4618,9 +4619,11 @@ util.create_tick_handler(function()
         end
         util.yield(500)
         if curVeh ~= players.get_vehicle_model(players.user()) then
+            util.toast("path2")
             curVeh = players.get_vehicle_model(players.user())
             resetVeh()
             setNewVeh()
+            outOfVeh = false
         end
     elseif onFoot() and outOfVeh == false then
         outOfVeh = true
