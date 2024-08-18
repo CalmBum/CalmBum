@@ -4610,7 +4610,7 @@ local outOfVeh = false
 
 util.create_tick_handler(function()
     if !onFoot() and !loadingTune then
-        if curVeh == players.get_vehicle_model(players.user()) and outOfVeh == true then
+        if curVeh == players.get_vehicle_model(players.user()) and outOfVeh == true and curVeh ~= 0 then
             refreshHandling()
             util.yield(200)
             acceleration(accelVal, boosties)
