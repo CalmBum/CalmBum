@@ -226,6 +226,9 @@ function handlingMenu()
     
     for i = 1, table.getn(stockHandling) do
         local temp = menu.slider_float(handlingMenuList, stockHandling[i].name, {stockHandling[i].name .. " "}, stockHandling[i].desc, -1000000, 1000000, math.floor((tonumber(string.format("%.6f", stockHandling[i].value * (stockHandling[i].mult or 1))) * 1000) + 0.5), 100 / (stockHandling[i].change or 1), function(num, prev_val, click)
+            if (click & CLICK_FLAG_AUTO) ~= 0 then
+                return
+            end
             if num ~= prev_val then
                 if stockHandling[i].mult then
                     num /= 10000
@@ -248,7 +251,7 @@ function handlingMenu()
                             local veh = get_user_car_id()
                             VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boosties)
                         else
-                            util.toast("Turn off calmbum accel and try again")
+                            util.toast("Turn off calmbum accel (set to 0) and try again")
                         end
                     end
                 end
@@ -1015,6 +1018,8 @@ function loadTune(tuneFile, withCar, loadAll)
             end
         end
     end
+
+    acceleration(accelVal, boosties) -- apply any potential changes to values that need boosties to be set
 
     if front ~= nil or rear ~= nil then
         local drivebias = 0.0
