@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2.8"
+local SCRIPT_VERSION = "7.2.9"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -174,18 +174,20 @@ local nitroHp
 local nitroTime
 local engineSwap = nil
 local clutchIn = false
+local boosties = 0
+local accelVal = 0
 
 function resetHandling()
     for i = 1, table.getn(stockHandling) do
         if stockHandling[i].special ~= nil and subAdr ~= 0 then
             if memory.read_float(subAdr + stockHandling[i].hash) ~= stockHandling[i].value then
                 memory.write_float(subAdr + stockHandling[i].hash, stockHandling[i].value)
-                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5))
+                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value * (stockHandling[i].mult or 1))) * 1000) + 0.5))
             end
         else
             if memory.read_float(adr + stockHandling[i].hash) ~= stockHandling[i].value then
                 memory.write_float(adr + stockHandling[i].hash, stockHandling[i].value)
-                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5))
+                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value * (stockHandling[i].mult or 1))) * 1000) + 0.5))
             end
         end
     end
@@ -195,11 +197,11 @@ function refreshHandling()
     for i = 1, table.getn(stockHandling) do
         if stockHandling[i].special ~= nil and subAdr ~= 0 then
             if memory.read_float(subAdr + stockHandling[i].hash) ~= stockHandling[i].value then
-                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", memory.read_float(subAdr + stockHandling[i].hash))) * 1000) + 0.5))
+                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", memory.read_float(subAdr + stockHandling[i].hash) * (stockHandling[i].mult or 1))) * 1000) + 0.5))
             end
         else
             if memory.read_float(adr + stockHandling[i].hash) ~= stockHandling[i].value then
-                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", memory.read_float(adr + stockHandling[i].hash))) * 1000) + 0.5))
+                menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", memory.read_float(adr + stockHandling[i].hash) * (stockHandling[i].mult or 1))) * 1000) + 0.5))
             end
         end
     end
@@ -219,35 +221,40 @@ end, false)
 
 function handlingMenu()
     local reset = menu.action(handlingMenuList, "Reset to stock", {"resethandlingcb"}, "Remove any changes you have made\nThis happens automatically when entering a new vehicle if 'Keep changes' is off", function()
-        for i = 1, table.getn(stockHandling) do
-            if stockHandling[i].special ~= nil and subAdr ~= 0 then
-                if memory.read_float(subAdr + stockHandling[i].hash) ~= stockHandling[i].value then
-                    memory.write_float(subAdr + stockHandling[i].hash, stockHandling[i].value)
-                    menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5))
-                end
-            else
-                if memory.read_float(adr + stockHandling[i].hash) ~= stockHandling[i].value then
-                    memory.write_float(adr + stockHandling[i].hash, stockHandling[i].value)
-                    menu.set_value(handlingRefs[i].ref, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5))
-                end
-            end
-        end
+        resetHandling()
     end)
     
     for i = 1, table.getn(stockHandling) do
-        local temp = menu.slider_float(handlingMenuList, stockHandling[i].name, {stockHandling[i].name .. " "}, "", -1000000, 1000000, math.floor((tonumber(string.format("%.6f", stockHandling[i].value)) * 1000) + 0.5), 100, function(num, prev_val, click)
-            if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
-                return
-            end
+        local temp = menu.slider_float(handlingMenuList, stockHandling[i].name, {stockHandling[i].name .. " "}, stockHandling[i].desc, -1000000, 1000000, math.floor((tonumber(string.format("%.6f", stockHandling[i].value * (stockHandling[i].mult or 1))) * 1000) + 0.5), 100 / (stockHandling[i].change or 1), function(num, prev_val, click)
             if num ~= prev_val then
+                if stockHandling[i].mult then
+                    num /= 10000
+                end
                 if stockHandling[i].special ~= nil and subAdr ~= 0 then
                     memory.write_float(subAdr + stockHandling[i].hash, num/1000)
                 else
                     memory.write_float(adr + stockHandling[i].hash, num/1000)
                 end
+                if stockHandling[i].boost then
+                    if stockHandling[i].hash ~= 0x60 then
+                        if accelVal == 0 then
+                            local veh = get_user_car_id()
+                            VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boosties)
+                        else
+                            acceleration(accelVal, boosties)
+                        end
+                    else
+                        if accelVal == 0 then
+                            local veh = get_user_car_id()
+                            VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boosties)
+                        else
+                            util.toast("Turn off calmbum accel and try again")
+                        end
+                    end
+                end
             end
         end)
-        table.insert(handlingRefs, {name = stockHandling[i].name, ref = temp})
+        table.insert(handlingRefs, {name = stockHandling[i].name, hash = stockHandling[i].hash, ref = temp})
         menu.set_precision(temp, 3)
     end
     table.insert(handlingRefs, {name = "reset", ref = reset})
@@ -257,10 +264,6 @@ end
 local powerList = menu.list(tuneList, "Power Mods")
 
 --Boosties------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-local boosties = 0
-local accelVal = 0
-local modAccel = 0
 local boostiesMenu = menu.text_input(powerList, "Boosties", {"boosties"}, "Modifies the vehicles top speed + power", function(speed, click)
     if (click & CLICK_FLAG_AUTO) ~= 0 or onFoot() then
         return
@@ -316,11 +319,9 @@ end)
 
 
 --------------------------------- Acceleration -----------------------------------------------------
-
 local accelValDisplay = 0
 
 function acceleration(val, boost, reset)
-    modAccel = val
     local veh
     if reset == nil then
         veh = get_user_car_id()
@@ -329,25 +330,22 @@ function acceleration(val, boost, reset)
     end
 
     if val == 0 then
-        local stock = stockHandling[19].value
-        memory.write_float(adr + stockHandling[19].hash, stockHandling[19].value)
+        local stock = stockHandling[32].value
+        memory.write_float(adr + stockHandling[32].hash, stockHandling[32].value)
         VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
-        accelValDisplay = math.floor((tonumber(string.format("%.3f", VEHICLE.GET_VEHICLE_ACCELERATION(get_user_car_id()))) * 100) + 0.5)
+        accelValDisplay = math.floor((tonumber(string.format("%.3f", VEHICLE.GET_VEHICLE_ACCELERATION(get_user_car_id()) * .74)) * 100) + 0.5)
         return
     end
 
-    local current = memory.read_float(adr + stockHandling[19].hash)
-
-    memory.write_float(adr + stockHandling[19].hash, 10)
+    val /= .91886 -- convert to kiddions values
+    local current = memory.read_float(adr + stockHandling[32].hash)
+    memory.write_float(adr + stockHandling[32].hash, 10)
     VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
-
     local mult = VEHICLE.GET_VEHICLE_ACCELERATION(veh) / 10
     local num = val / mult
-
-    memory.write_float(adr + stockHandling[19].hash, num)
+    memory.write_float(adr + stockHandling[32].hash, num)
     VEHICLE.MODIFY_VEHICLE_TOP_SPEED(veh, boost)
-
-    memory.write_float(adr + stockHandling[19].hash, current)
+    memory.write_float(adr + stockHandling[32].hash, current)
 end
 
 local accelOpt
@@ -358,9 +356,8 @@ function newAccel()
             return
         end
         accelValDisplay = val
-        acceleration(val/100, boosties)
+        acceleration(val/100, boosties) -- convert to kiddions values
         accelVal = val/100
-
         if val == 0 then
             util.toast("Acceleration set to stock")
         else
@@ -528,7 +525,6 @@ end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ------------------ drive bias ----------------------------------------------------------------------------------------------------------------------------------------------
-
 local driveBias = -1
 
 local driveBiasSlider = menu.slider_float(tuneList, "Drive Bias", {"drivebiascb"}, "0 = RWD\n1 = FWD\nTHIS WILL RESPAWN YOUR CAR\nFor constructs, you will need to respawn the construct after having applied the bias", 0, 100, driveBias * 100, 5, function(num, prev_val, click)
@@ -703,62 +699,62 @@ local loadingTune = false
 
 handlingData =
 {
-	{name = "Steering Lock", hash = 0x80, value = 0.0},
-    {name = "Traction Curve Max", hash = 0x88, value = 0.0},
-    {name = "Traction Curve Min", hash = 0x90, value = 0.0},
-    {name = "Traction Bias Front", hash = 0xB0, value = 0.0},
-	{name = "Traction Bias Rear", hash = 0xB4, value = 0.0},
-	{name = "Hand Brake Force", hash = 0x7C, value = 0.0},
-    {name = "Brake Force", hash = 0x6C, value = 0.0},
-	{name = "Brake Bias Front", hash = 0x74, value = 0.0},
-	{name = "Brake Bias Rear", hash = 0x78, value = 0.0},
-    {name = "Up Shift", hash = 0x58, value = 0.0},
-	{name = "Down Shift", hash = 0x5C, value = 0.0},
-    {name = "Toe Front", hash = 0x14, value = 0.0, special = true},
-	{name = "Toe Rear", hash = 0x18, value = 0.0, special = true},
-	{name = "Camber Front", hash = 0x1C, value = 0.0, special = true},
-	{name = "Camber Rear", hash = 0x20, value = 0.0, special = true},
-	{name = "Castor", hash = 0x24, value = 0.0, special = true},
-    {name = "Suspension Force", hash = 0xBC, value = 0.0},
-    {name = "Low Speed Traction Loss Mult", hash = 0xA8, value = 0.0},
-    {name = "Initial Drive Force", hash = 0x60, value = 0.0},
-	{name = "Drive Max Flat Vel", hash = 0x64, value = 0.0},
-	{name = "Initial Drag Coefficient", hash = 0x10, value = 0.0},
-	{name = "Downforce Modifier", hash = 0x14, value = 0.0},
-    {name = "Mass", hash = 0x0C, value = 0.0},
-	{name = "Centre Of Mass Offset X", hash = 0x20, value = 0.0},
-	{name = "Centre Of Mass Offset Y", hash = 0x24, value = 0.0},
-	{name = "Centre Of Mass Offset Z", hash = 0x28, value = 0.0},
-	{name = "Inertia Multiplier X", hash = 0x30, value = 0.0},
-	{name = "Inertia Multiplier Y", hash = 0x34, value = 0.0},
-	{name = "Inertia Multiplier Z", hash = 0x38, value = 0.0},
-	{name = "Drive Bias Front", hash = 0x48, value = 0.0},
-	{name = "Drive Bias Rear", hash = 0x4C, value = 0.0},
-	{name = "Drive Inertia", hash = 0x54, value = 0.0},
-	{name = "Initial Drive Max Flat Vel", hash = 0x68, value = 0.0},
-	{name = "Steering Lock Ratio", hash = 0x84, value = 0.0},
-	{name = "Traction Curve Max Ratio", hash = 0x8C, value = 0.0},
-	{name = "Traction Curve Ratio", hash = 0x94, value = 0.0},
-	{name = "Traction Curve Lateral", hash = 0x98, value = 0.0},
-	{name = "Traction Curve Lateral Ratio", hash = 0x9C, value = 0.0},
-	{name = "Traction Spring Delta Max", hash = 0xA0, value = 0.0},
-	{name = "Traction Spring Delta Max Ratio", hash = 0xA4, value = 0.0},
-	{name = "Camber Stiffnesss", hash = 0xAC, value = 0.0},
-	{name = "Traction Loss Mult", hash = 0xB8, value = 0.0},
-	{name = "Suspension Compression Dampening", hash = 0xC0, value = 0.0},
-	{name = "Suspension Rebound Dampening", hash = 0xC4, value = 0.0},
-	{name = "Suspension Upper Limit", hash = 0xC8, value = 0.0},
-	{name = "Suspension Lower Limit", hash = 0xCC, value = 0.0},
-	{name = "Suspension Raise", hash = 0xD0, value = 0.0},
-	{name = "Suspension Bias Front", hash = 0xD4, value = 0.0},
-	{name = "Suspension Bias Rear", hash = 0xD8, value = 0.0},
-	{name = "Anti-roll Bar Force", hash = 0xDC, value = 0.0},
-	{name = "Anti-roll Bar Bias Front", hash = 0xE0, value = 0.0},
-	{name = "Anti-roll Bar Bias Rear", hash = 0xE4, value = 0.0},
-	{name = "Roll Centre Height Front", hash = 0xE8, value = 0.0},
-	{name = "Roll Centre Height Rear", hash = 0xEC, value = 0.0},
-	{name = "Engine Damage Mult", hash = 0xFC, value = 0.0},
-	{name = "Max Drive Bias Transfer", hash = 0x2C, value = 0.0}
+	{name = "Steering Lock", hash = 0x80, value = 0.0, desc = "Changes how far your wheels can turn. Measured in radians.\nThe wheel in the direction you are steering in will rotate whatever radians you set (1 = 57.3 deg).\nThe opposite wheel will rotate 3/4 the amount set (1 = 43 deg)"},
+    {name = "Traction Curve Max", hash = 0x88, value = 0.0, desc = "How much traction you have when your wheels have grip (not sliding) as well as traction when using brake or ebrake.\nThis includes the grip your front wheels have when in a drift."},
+    {name = "Traction Curve Min", hash = 0x90, value = 0.0, desc = "How much traction you have when your wheels lose grip (sliding)."},
+    {name = "Traction Front", hash = 0xB0, value = 0.0, desc = "Multiplier of traction curve min/max for front wheels.\n2 = 2x min/max value, 0.5 = 1/2 min/max value.\nSetting to 0 removes front wheels"},
+	{name = "Traction Rear", hash = 0xB4, value = 0.0, desc = "Multiplier of traction curve min/max for rear wheels.\n2 = 2x min/max value, 0.5 = 1/2 min/max value"},
+	{name = "Hand Brake Force", hash = 0x7C, value = 0.0, desc = "Strength of force applied to car when ebrake is used.\n2 seems to be the max, higher values perform the same.\nNegative values will make ebrake a jank boost button."},
+    {name = "Brake Force", hash = 0x6C, value = 0.0, desc = "How strong your brakes are.\nMax value is Traction Curve Max/4, any values above that will have no increased strength."},
+	{name = "Brake Force Front", hash = 0x74, value = 0.0, desc = "How much brake force the front wheels will have. 2 is the most force, higher values will have no more strength.\nNegative values will apply a forward force when braking."},
+	{name = "Brake Force Rear", hash = 0x78, value = 0.0, desc = "How much brake force the rear wheels will have. 2 is the most force, higher values will have no more strength.\nNegative values will apply a forward force when braking."},
+    {name = "Up Shift Speed", hash = 0x58, value = 0.0, desc = "How fast upshifting takes, higher values = faster.\nValues over 10 are all about the same speed."},
+	{name = "Down Shift Speed", hash = 0x5C, value = 0.0, desc = "How fast downshifting takes, higher values = faster.\nValues over 10 are all about the same speed"},
+    {name = "Toe Front", hash = 0x14, value = 0.0, special = true, change = 10, desc = "Measured in radians. Negative is toe out, positive is toe in.\nEx: 1 degree toe out would be -0.017"},
+	{name = "Toe Rear", hash = 0x18, value = 0.0, special = true, change = 10, desc = "Measured in radians. Negative is toe out, positive is toe in.\nEx: 1 degree toe out would be -0.017"},
+	{name = "Camber Front", hash = 0x1C, value = 0.0, special = true, change = 10, desc = "Measured in radians.\nEx: 1 degree negative camber would be -0.017"},
+	{name = "Camber Rear", hash = 0x20, value = 0.0, special = true, change = 10, desc = "Measured in radians.\nEx: 1 degree negative camber would be -0.017"},
+	{name = "Castor", hash = 0x24, value = 0.0, special = true, change = 10, desc = "Measured in radians, range of -1.57 to 1.57.\nNegative value = positive caster, positive value = negative caster (thanks rockstar)"},
+	{name = "Low Speed Traction Loss Mult", hash = 0xA8, value = 0.0, desc = "Higher values decrease traction at low speed.\nFor a realistic experience set to 0 - 0.2"},
+	{name = "Traction Curve Max Ratio", hash = 0x8C, value = 0.0, desc = "This is the strength of Traction Force Max's effect on straight line traction.\nIt will change your brake strength, engine braking strength, handbrake strength, etc.\nThis can be usefull for drifting if you want more/less traction in the front without changing the performance of your brakes."},
+	{name = "Traction Curve Ratio", hash = 0x94, value = 0.0, desc = "Honestly... no idea"},
+	{name = "Traction Curve Lateral Ratio", hash = 0x9C, value = 0.0, desc = "Think of this as a measure of force that is pushing the rear of your car in the direction that you are steering.\nSetting this higher reduces oversteer, and lower increases oversteer.\nLowering this can be useful for drifting by allowing the car to stay in drift longer."},
+	{name = "Traction Spring Delta Max", hash = 0xA0, value = 0.0, desc = "A measure of force applied to your car after coming to a stop.\nThis will push your car in the opposite direction of your momentum after stopping.\nThere really isn't any use for this."},
+	{name = "Traction Spring Delta Max Ratio", hash = 0xA4, value = 0.0, desc = "Use in tandem with Traction Spring Delta Max.\nHigher values will result in more force applied."},
+	{name = "Traction Loss Mult", hash = 0xB8, value = 0.0, desc = "How much traction is lost when changing surface types.\n0 will result in no traction loss.\nVery high values are undriveable but fun to mess with."},
+    {name = "Suspension Force", hash = 0xBC, value = 0.0, desc = "Measure of how firm your suspension is.\nValues over 20 cause extreme bounciness."},
+	{name = "Suspension Compression Dampening", hash = 0xC0, value = 0.0, desc = "Recommended range of 0-1\nHigh values will cause the suspension to compress very slowly.\nLow values will compress very fast"},
+	{name = "Suspension Rebound Dampening", hash = 0xC4, value = 0.0, desc = "Recommended range of 0-0.5\nHigh values will cause the suspension to rebound very slowly.\nLow values will rebound very fast"},
+	{name = "Suspension Dampening Front", hash = 0xD4, value = 0.0, desc = "This changes the force of Suspension Compression Dampening and Suspension Rebound Dampening applied to the front wheels."},
+	{name = "Suspension Dampening Rear", hash = 0xD8, value = 0.0, desc = "This changes the force of Suspension Compression Dampening and Suspension Rebound Dampening applied to the rear wheels."},
+	{name = "Suspension Upper Limit", hash = 0xC8, value = 0.0, change = 10, desc = "Sets how high up your wheels can travel.\nRecommend staying within .1 of original value."},
+	{name = "Suspension Lower Limit", hash = 0xCC, value = 0.0, change = 10, desc = "Sets how far down your wheels can travel.\nRecommend staying within .1 of original value."},
+	{name = "Suspension Raise", hash = 0xD0, value = 0.0, change = 10, desc = "Sets where your wheels are in relation to the body of your car."},
+    {name = "Initial Drive Force", hash = 0x60, value = 0.0, boost = true, desc = 'This changes your cars acceleration/torque.\nRecommend using "Acceleration" in power mods, it directly uses this value.'},
+	{name = "Initial Drag Coefficient", hash = 0x10, value = 0.0, boost = true, mult = 10000, desc = "Affects top speed.\nWhen applied with any boosties value (including 0) this will change the downforce of your car effectively altering your top speed.\nNegative values will increase your top speed.\nSet to -1000 for a surprise :)"},
+	{name = "Initial Drive Max Flat Vel", hash = 0x68, value = 0.0, boost = true, desc = "This changes your top speed by changing your gear ratio.\nHigher values will be longer gears/higher speeds.\nLower values will be shorter gears/lower speeds."},
+	{name = "Drive Bias Front", hash = 0x48, value = 0.0, desc = "How much drive force is applied to the front wheels.\nIf the initial value is 0 you will need to respawn your car for the change to be applied.\nSetting this value high acts similarly to using calmbum acceleration or torque."},
+	{name = "Drive Bias Rear", hash = 0x4C, value = 0.0, desc = "How much drive force is applied to the rear wheels.\nIf the initial value is 0 you will need to respawn your car for the change to be applied.\nSetting this value high acts similarly to using calmbum acceleration or torque."},
+	{name = "Drive Inertia", hash = 0x54, value = 0.0, desc = "How quickly your engine redlines.\nValues beyond 2 have no further change.\nNegative values will cause the car to move backwards and brake."},
+	{name = "Camber Stiffnesss", hash = 0xAC, value = 0.0, desc = "This applies a force to your car in the direction that it is leaning.\nAnti-roll bar force will effect how much force is applied.\nNegative values do not seem to have any change."},
+	{name = "Anti-roll Bar Force", hash = 0xDC, value = 0.0, desc = "How strong your anti-roll bar is.\nHigher values will prevent the car from leaning when turning.\nValues above 10 can cause weird suspension behavior."},
+	{name = "Anti-roll Bar Bias Front", hash = 0xE0, value = 0.0, desc = "Strength of anti-roll bar in front\nVery high or low values can cause weird suspension behavior."},
+	{name = "Anti-roll Bar Bias Rear", hash = 0xE4, value = 0.0, desc = "Strength of anti-roll bar in rear\nVery high or low values can cause weird suspension behavior."},
+	{name = "Roll Centre Height Front", hash = 0xE8, value = 0.0, desc = "Height in meters from the road to your cars front roll center.\nThis allows you to move the balance of your car forwards or backwards."},
+	{name = "Roll Centre Height Rear", hash = 0xEC, value = 0.0, desc = "Height in meters from the road to your cars rear roll center.\nThis allows you to move the balance of your car forwards or backwards."},
+	{name = "Engine Damage Mult", hash = 0xFC, value = 0.0, desc = "How easily your engine takes damage.\nSetting to 0 will prevent your engine from breaking.\nNegative values will actually repair a damaged engine when crashing."},
+	{name = "Mass", hash = 0x0C, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Max Drive Bias Transfer", hash = 0x2C, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Traction Curve Lateral", hash = 0x98, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Steering Lock Ratio", hash = 0x84, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Drive Max Flat Vel", hash = 0x64, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Downforce Modifier", hash = 0x14, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Centre Of Mass Offset X", hash = 0x20, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Centre Of Mass Offset Y", hash = 0x24, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Centre Of Mass Offset Z", hash = 0x28, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Inertia Multiplier X", hash = 0x30, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Inertia Multiplier Y", hash = 0x34, value = 0.0, desc = "Seems to do nothing", useless = true},
+	{name = "Inertia Multiplier Z", hash = 0x38, value = 0.0, desc = "Seems to do nothing", useless = true}
 }
 
 function saveTune(tuneFile)
@@ -793,16 +789,30 @@ function saveTune(tuneFile)
     for i = 1, table.getn(handlingData) do
         if handlingData[i].special == true and subAdr ~= 0 then
             if math.abs(memory.read_float(subAdr + handlingData[i].hash) - stockHandling[i].value) < 0.001 then
-                table.insert(tune.handling, {name = handlingData[i].name, hash = handlingData[i].hash, value = stockHandling[i].value, special = true})
+                table.insert(tune.handling, stockHandling[i])
             else
-                table.insert(tune.handling, {name = handlingData[i].name, hash = handlingData[i].hash, value = memory.read_float(subAdr + handlingData[i].hash), special = true, original = stockHandling[i].value, changed = true})
+                local temp = stockHandling[i].value
+                stockHandling[i].value = memory.read_float(subAdr + handlingData[i].hash)
+                stockHandling[i].original = stockHandling[i].value
+                stockHandling[i].changed = true
+                table.insert(tune.handling, stockHandling[i])
+                stockHandling[i].value = temp
+                table.remove(stockHandling[i], original)
+                table.remove(stockHandling[i], changed)
                 changes += 1
             end
         else
             if math.abs(memory.read_float(adr + handlingData[i].hash) - stockHandling[i].value) < 0.001 then
-                table.insert(tune.handling, {name = handlingData[i].name, hash = handlingData[i].hash, value = stockHandling[i].value})
+                table.insert(tune.handling, stockHandling[i])
             else
-                table.insert(tune.handling, {name = handlingData[i].name, hash = handlingData[i].hash, value = memory.read_float(adr + handlingData[i].hash), original = stockHandling[i].value, changed = true})
+                local temp = stockHandling[i].value
+                stockHandling[i].value = memory.read_float(adr + handlingData[i].hash)
+                stockHandling[i].original = stockHandling[i].value
+                stockHandling[i].changed = true
+                table.insert(tune.handling, stockHandling[i])
+                stockHandling[i].value = temp
+                table.remove(stockHandling[i], original)
+                table.remove(stockHandling[i], changed)
                 changes += 1
             end
         end
@@ -876,8 +886,8 @@ function loadTune(tuneFile, withCar, loadAll)
         elseif tune.calmbum[i].name == "Calmbum Acceleration" then
             local val = tune.calmbum[i].value
             acceleration(val/100, boosties)
-            accelVal = val/100
             accelValDisplay = val
+            accelVal = val/100
             menu.set_value(accelOpt, val)
         elseif tune.calmbum[i].name == "Torque" then
             torqueMult = tune.calmbum[i].value
@@ -962,39 +972,45 @@ function loadTune(tuneFile, withCar, loadAll)
     end
 
     -- handling settings
-    for i = 1, table.getn(tune.handling) do
-        if tune.handling[i].name == "Drive Bias Front" then
-            if tune.handling[i].value ~= memory.read_float(adr + stockHandling[i].hash) then
-                front = tune.handling[i].value
+    for tune.handling as thing do
+        local stockThing
+        for stockHandling as thing2 do
+            if thing2.name == thing.name then
+                stockThing = thing2
             end
         end
-        if tune.handling[i].name == "Drive Bias Rear" then
-            if tune.handling[i].value ~= memory.read_float(adr + stockHandling[i].hash) then
-                rear = tune.handling[i].value
+        if thing.hash == 0x48 then
+            if thing.value ~= memory.read_float(adr + stockThing.hash) then
+                front = thing.value
+            end
+        end
+        if thing.hash == 0x4C then
+            if thing.value ~= memory.read_float(adr + stockThing.hash) then
+                rear = thing.value
             end
         end
         if !loadAll then
-            if tune.handling[i].changed == true then
-                if tune.handling[i].special ~= nil then
-                    memory.write_float(subAdr + tune.handling[i].hash, tune.handling[i].value)
+            if thing.changed == true then
+                if thing.special ~= nil and subAdr ~= 0 then
+                    memory.write_float(subAdr + thing.hash, thing.value)
                 else
-                    memory.write_float(adr + tune.handling[i].hash, tune.handling[i].value)
+                    memory.write_float(adr + thing.hash, thing.value)
                 end
                 for handlingRefs as n do
-                    if n.name == tune.handling[i].name then
-                        menu.set_value(n.ref, math.floor((tonumber(string.format("%.6f", tune.handling[i].value)) * 1000) + 0.5))
+                    if n.hash == thing.hash then
+                        menu.set_value(n.ref, math.floor((tonumber(string.format("%.6f", thing.value * (thing.mult or 1))) * 1000) + 0.5))
                     end
                 end
             end
         else
-            if tune.handling[i].special ~= nil then
-                memory.write_float(subAdr + tune.handling[i].hash, tune.handling[i].value)
+            if thing.special ~= nil then
+                memory.write_float(subAdr + thing.hash, thing.value)
             else
-                memory.write_float(adr + tune.handling[i].hash, tune.handling[i].value)
+                memory.write_float(adr + thing.hash, thing.value)
             end
             for handlingRefs as n do
-                if n.name == tune.handling[i].name then
-                    menu.set_value(n.ref, math.floor((tonumber(string.format("%.6f", tune.handling[i].value)) * 1000) + 0.5))
+                if n.hash == thing.hash then
+                    menu.set_value(n.ref, math.floor((tonumber(string.format("%.6f", thing.value * (thing.mult or 1))) * 1000) + 0.5))
                 end
             end
         end
@@ -2239,7 +2255,6 @@ function runRewind(data, last)
         y = (targetRot.y - oldRot4.y),
         z = (targetRot.z - oldRot2.z)
     }
-    ENTITY.SET_ENTITY_VELOCITY(veh, vel.x, vel.y, vel.z)
     if velR.x > 300 then
         velR.x -= 360
     elseif velR.x < -300 then
@@ -4229,9 +4244,9 @@ function saveVeh(veh, temp)
         cloneTune.gear = entities.get_current_gear(entities.handle_to_pointer(veh))
         cloneTune.speed = ENTITY.GET_ENTITY_SPEED(veh)
         cloneTune.coord = ENTITY.GET_ENTITY_COORDS(veh)
-        cloneTune.id = get_user_car_id()
     end
     
+    cloneTune.id = get_user_car_id()
     cloneTune.radio = AUDIO.GET_RADIO_STATION_NAME(AUDIO.GET_PLAYER_RADIO_STATION_INDEX())
     cloneTune.wheel_type = VEHICLE.GET_VEHICLE_WHEEL_TYPE(veh)
     cloneTune.tint_type = VEHICLE.GET_VEHICLE_WINDOW_TINT(veh)
@@ -4537,7 +4552,7 @@ end
 
 function setNewVeh()
     if clone == nil then
-        clone = saveVeh(get_user_car_id(), true)
+        clone = saveVeh(get_user_car_id(), false)
     end
     adr = entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer())
     subAdr = entities.handling_get_subhandling(adr, 8)
@@ -4555,9 +4570,9 @@ function setNewVeh()
         handlingMenu()
     end
     if accelValDisplay == 0 then
-        accelValDisplay = math.floor((tonumber(string.format("%.3f", VEHICLE.GET_VEHICLE_ACCELERATION(get_user_car_id()))) * 100) + 0.5)
+        acceleration(0, boosties)
     end
-    showCvt({name = "HF_CVT", bit = 1 << 12}, 0x128) --{name = "CF_CAN_WHEELIE", bit = 1 << 24}
+    showCvt({name = "HF_CVT", bit = 1 << 12}, 0x128)
     -- remove all hard rev limit's because all it does is make me sad
     if subAdr ~= 0 and BitTest(subAdr + 0x003C, 1 << 16) then
         memory.write_int(subAdr + 0x003C, ClearBit(memory.read_int(subAdr + 0x003C), 1 << 16))
@@ -4590,19 +4605,16 @@ local outOfVeh = false
 
 util.create_tick_handler(function()
     if !onFoot() and !loadingTune then
-        if curVeh == players.get_vehicle_model(players.user()) then
-            if outOfVeh == true then
-                refreshHandling()
-                util.yield(200)
-                acceleration(accelVal, boosties)
-                outOfVeh = false
-            end
-            return
+        if curVeh == players.get_vehicle_model(players.user()) and outOfVeh == true then
+            refreshHandling()
+            util.yield(200)
+            acceleration(accelVal, boosties)
+            outOfVeh = false
         end
         util.yield(500)
         if curVeh ~= players.get_vehicle_model(players.user()) then
-            resetVeh()
             curVeh = players.get_vehicle_model(players.user())
+            resetVeh()
             setNewVeh()
         end
     elseif onFoot() and outOfVeh == false then
