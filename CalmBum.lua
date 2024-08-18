@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.2.9"
+local SCRIPT_VERSION = "7.3.0"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -765,7 +765,7 @@ function saveTune(tuneFile)
         }
     }
 
-    local changes = 0
+    local changes = {}
 
     if adr == 0 then
         setNewVeh()
@@ -792,14 +792,11 @@ function saveTune(tuneFile)
                 table.insert(tune.handling, stockHandling[i])
             else
                 local temp = stockHandling[i].value
-                stockHandling[i].value = memory.read_float(subAdr + handlingData[i].hash)
-                stockHandling[i].original = stockHandling[i].value
+                stockHandling[i].value = memory.read_float(adr + handlingData[i].hash)
+                stockHandling[i].original = temp
                 stockHandling[i].changed = true
                 table.insert(tune.handling, stockHandling[i])
-                stockHandling[i].value = temp
-                table.remove(stockHandling[i], original)
-                table.remove(stockHandling[i], changed)
-                changes += 1
+                table.insert(changes, {pos = i, val = temp})
             end
         else
             if math.abs(memory.read_float(adr + handlingData[i].hash) - stockHandling[i].value) < 0.001 then
@@ -807,13 +804,10 @@ function saveTune(tuneFile)
             else
                 local temp = stockHandling[i].value
                 stockHandling[i].value = memory.read_float(adr + handlingData[i].hash)
-                stockHandling[i].original = stockHandling[i].value
+                stockHandling[i].original = temp
                 stockHandling[i].changed = true
                 table.insert(tune.handling, stockHandling[i])
-                stockHandling[i].value = temp
-                table.remove(stockHandling[i], original)
-                table.remove(stockHandling[i], changed)
-                changes += 1
+                table.insert(changes, {pos = i, val = temp})
             end
         end
     end
@@ -826,11 +820,17 @@ function saveTune(tuneFile)
         end
         file:write(json.stringify(tune, nil, 4))
         file:close()
-        util.toast("Saved " .. tuneName .. "\n" .. changes .. " handling values saved.")
+        util.toast("Saved " .. tuneName .. "\n" .. table.getn(changes) .. " handling values saved.")
         -- refresh so new tune shows up in saved
         refreshTunes()
     else
         util.toast("No changes to save")
+    end
+
+    for i = 1, table.getn(changes) do
+        stockHandling[changes[i].pos].value = changes[i].val
+        stockHandling[changes[i].pos].changed = nil
+        stockHandling[changes[i].pos].original = nil
     end
 end
 
@@ -912,16 +912,16 @@ function loadTune(tuneFile, withCar, loadAll)
             local fwdBias = memory.read_float(adr + 0x48)
             local rwdBias = memory.read_float(adr + 0x4C)
             local awdBias = false
+            local curDriveBias
             if fwdBias == 0.0 then
-                driveBias = 0.0
+                curDriveBias = 0.0
             elseif rwdBias == 0.0 then
-                driveBias = 1.0
+                curDriveBias = 1.0
             else
-                driveBias = tonumber(string.format("%.2f", fwdBias / 2))
+                curDriveBias = tonumber(string.format("%.2f", fwdBias / 2))
                 awdBias = true
             end
-
-            if driveBias ~= val then
+            if curDriveBias ~= val then
                 if val == 1.0 or val == 0.0 then
                     needReset = true
                     awdBias = false
@@ -931,7 +931,6 @@ function loadTune(tuneFile, withCar, loadAll)
                     end
                     awdBias = true
                 end
-            
                 if awdBias == false then
                     memory.write_float(adr + 0x48, val)
                     memory.write_float(adr + 0x4C, (1 - val))
@@ -939,7 +938,8 @@ function loadTune(tuneFile, withCar, loadAll)
                     memory.write_float(adr + 0x48, val * 2)
                     memory.write_float(adr + 0x4C, (1 - val) * 2)
                 end
-                menu.set_value(driveBiasSlider, math.floor(val * 100))
+                driveBias = val
+                menu.set_value(driveBiasSlider, val * 100)
             end
         elseif tune.calmbum[i].name == "BBG" then
             if tune.calmbum[i].value == true then
@@ -975,17 +975,17 @@ function loadTune(tuneFile, withCar, loadAll)
     for tune.handling as thing do
         local stockThing
         for stockHandling as thing2 do
-            if thing2.name == thing.name then
+            if thing2.hash == thing.hash then
                 stockThing = thing2
             end
         end
         if thing.hash == 0x48 then
-            if thing.value ~= memory.read_float(adr + stockThing.hash) then
+            if thing.value - memory.read_float(adr + stockThing.hash) > 0.001 then
                 front = thing.value
             end
         end
         if thing.hash == 0x4C then
-            if thing.value ~= memory.read_float(adr + stockThing.hash) then
+            if thing.value - memory.read_float(adr + stockThing.hash) > 0.001 then
                 rear = thing.value
             end
         end
