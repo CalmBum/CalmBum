@@ -2790,8 +2790,24 @@ end)
 --Shit Rider---------------------------------------------------------------------------------------------------------------------------
 local stateShit = 0
 local objectShit = 0
+local deadShit = false
+local fastShit = 0
+local speedShit = 0.2
 
 menu.toggle_loop(playerList, "Shitter ride", {"shitterridecb"}, "Ride on the most magnificent of thrones", function()
+    if ENTITY.IS_ENTITY_DEAD(players.user_ped(), true) and !deadShit then
+        deadShit = true
+        TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
+        ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
+        util.yield(1000)
+        ENTITY.SET_ENTITY_VISIBLE(objectShit, false, false)
+        entities.delete_by_handle(objectShit)
+        stateShit = -1
+    end
+    if !ENTITY.IS_ENTITY_DEAD(players.user_ped(), true) and deadShit then
+        deadShit = false
+        stateShit = 0
+    end
     if stateShit == 0 then
         local objHash <const> = util.joaat("prop_ld_toilet_01")
         util.request_model(objHash)
@@ -2809,39 +2825,52 @@ menu.toggle_loop(playerList, "Shitter ride", {"shitterridecb"}, "Ride on the mos
         ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(objectShit, false, false)
         TASK.TASK_PLAY_ANIM(localPed, "timetable@ron@ig_3_couch", "Base", 8.0, -8.0, -1, 1, 0.0, false, false, false)
         stateShit = 1
-
     elseif stateShit == 1 then
-        HUD.DISPLAY_SNIPER_SCOPE_THIS_FRAME()
         local objPos = ENTITY.GET_ENTITY_COORDS(objectShit, false)
-        local camrot = CAM.GET_GAMEPLAY_CAM_ROT(0)
-        ENTITY.SET_ENTITY_ROTATION(objectShit, 0, 0, camrot.z - 180, 0, true)
+        local camRot = CAM.GET_GAMEPLAY_CAM_ROT(0)
+        ENTITY.SET_ENTITY_ROTATION(objectShit, -camRot.x, camRot.y, camRot.z - 180, 0, true)
         local forwardV = ENTITY.GET_ENTITY_FORWARD_VECTOR(players.user_ped())
         forwardV.z = 0.0
         local delta = v3.new(0, 0, 0)
-        local speed = 0.2
         if PAD.IS_CONTROL_PRESSED(0, 61) then
-            speed = 1.5
+            if fastShit < 100 then
+                fastShit += 1
+                speedShit = 0.5
+            elseif speedShit < 1.5 then
+                speedShit += 0.005
+            end
+        elseif fastShit > 0 then
+            fastShit = 0
+            speedShit = 0.2
+        else
+            speedShit = 0.2
         end
         if PAD.IS_CONTROL_PRESSED(0, 32) then
-            delta = v3.new(forwardV)
-            delta:mul(speed)
+            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, 0, -speedShit, 0)
+            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
         end
-        if PAD.IS_CONTROL_PRESSED(0, 130)  then
-            delta = v3.new(forwardV)
-            delta:mul(-speed)
+        if PAD.IS_CONTROL_PRESSED(0, 33)  then
+            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, 0, speedShit, 0)
+            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+        end
+        if PAD.IS_CONTROL_PRESSED(0, 34)  then
+            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, speedShit, 0, 0)
+            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+        end
+        if PAD.IS_CONTROL_PRESSED(0, 35)  then
+            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, -speedShit, 0, 0)
+            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
         end
         if PAD.IS_DISABLED_CONTROL_PRESSED(0, 22) then
-            delta.z = speed
+            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, 0, 0, speedShit / 2)
+            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
         end
         if PAD.IS_CONTROL_PRESSED(0, 36) then
-            delta.z = -speed
+            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, 0, 0, -speedShit / 2)
+            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
         end
-        local newPos = v3.new(objPos)
-        newPos:add(delta)
-        ENTITY.SET_ENTITY_COORDS(objectShit, newPos.x, newPos.y, newPos.z, false, false, false, false)
-
     end
-end, function ()
+end, function()
     TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
     ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
     ENTITY.SET_ENTITY_VISIBLE(objectShit, false, false)
