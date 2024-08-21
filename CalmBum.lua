@@ -1837,7 +1837,9 @@ menu.toggle_loop(effectsList, "FD Lights", {"fdlightcb"}, "Show accel/decel with
         VEHICLE.SET_VEHICLE_NEON_ENABLED(vehFd, 3, false)
     end
 end, function()
-    resetNeon(vehFd, lightsFd, sideFd, frontFd, backFd)
+    if vehFd == get_user_car_id() then
+        resetNeon(vehFd, lightsFd, sideFd, frontFd, backFd)
+    end
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -2693,9 +2695,7 @@ menu.action(playerList, "Extra Muddy Poo", {"shitmudcb"}, "You see that ugly ass
             util.yield(0)
         end
         TASK.TASK_PLAY_ANIM(targetPed, "missfbi3ig_0", "shit_loop_trev", 8.0, 8.0, 2000, 0, 0, false, false, false)
-        
         util.yield(500)
-        
         local bone = PED.GET_PED_BONE_INDEX(targetPed, 11816)
         STREAMING.REQUEST_NAMED_PTFX_ASSET("core")
         while not STREAMING.HAS_NAMED_PTFX_ASSET_LOADED("core") do
@@ -2711,9 +2711,7 @@ menu.action(playerList, "Extra Muddy Poo", {"shitmudcb"}, "You see that ugly ass
             1.0,
             false, false, false
         )
-        
         util.yield(500)
-        
         local pos = ENTITY.GET_ENTITY_COORDS(targetPed)
         local object_ = OBJECT.CREATE_OBJECT(MISC.GET_HASH_KEY("prop_big_shit_02"), pos.x, pos.y, pos.z - 0.6, true, true)
         NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(object_)
@@ -2801,29 +2799,25 @@ menu.toggle_loop(playerList, "Magic Poo", {"magicpoocb"}, "Behold! Thine magical
             speedPoo = 0.2
         end
         if PAD.IS_CONTROL_PRESSED(0, 32) then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectPoo, 0, speedPoo, 0)
-            ENTITY.SET_ENTITY_COORDS(objectPoo, new.x, new.y, new.z, false, false, false, false)
+            change.y -= speedPoo
         end
         if PAD.IS_CONTROL_PRESSED(0, 33)  then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectPoo, 0, -speedPoo, 0)
-            ENTITY.SET_ENTITY_COORDS(objectPoo, new.x, new.y, new.z, false, false, false, false)
+            change.y += speedPoo
         end
         if PAD.IS_CONTROL_PRESSED(0, 34)  then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectPoo, -speedPoo, 0, 0)
-            ENTITY.SET_ENTITY_COORDS(objectPoo, new.x, new.y, new.z, false, false, false, false)
+            change.x += speedPoo
         end
         if PAD.IS_CONTROL_PRESSED(0, 35)  then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectPoo, speedPoo, 0, 0)
-            ENTITY.SET_ENTITY_COORDS(objectPoo, new.x, new.y, new.z, false, false, false, false)
+            change.x -= speedPoo
         end
         if PAD.IS_DISABLED_CONTROL_PRESSED(0, 22) then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectPoo, 0, 0, speedPoo / 2)
-            ENTITY.SET_ENTITY_COORDS(objectPoo, new.x, new.y, new.z, false, false, false, false)
+            change.z += speedPoo/2
         end
         if PAD.IS_CONTROL_PRESSED(0, 36) then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectPoo, 0, 0, -speedPoo / 2)
-            ENTITY.SET_ENTITY_COORDS(objectPoo, new.x, new.y, new.z, false, false, false, false)
+            change.z -= speedPoo/2
         end
+        local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectPoo, change.x, change.y, change.z)
+        ENTITY.SET_ENTITY_COORDS(objectPoo, new.x, new.y, new.z, false, false, false, false)
 	end
 end, function ()
     if stateShit ~= 1 then
@@ -2902,29 +2896,25 @@ menu.toggle_loop(playerList, "Shitter ride", {"shitterridecb"}, "Ride on the mos
             speedShit = 0.2
         end
         if PAD.IS_CONTROL_PRESSED(0, 32) then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, 0, -speedShit, 0)
-            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+            change.y -= speedShit
         end
         if PAD.IS_CONTROL_PRESSED(0, 33)  then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, 0, speedShit, 0)
-            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+            change.y += speedShit
         end
         if PAD.IS_CONTROL_PRESSED(0, 34)  then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, speedShit, 0, 0)
-            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+            change.x += speedShit
         end
         if PAD.IS_CONTROL_PRESSED(0, 35)  then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, -speedShit, 0, 0)
-            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+            change.x -= speedShit
         end
         if PAD.IS_DISABLED_CONTROL_PRESSED(0, 22) then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, 0, 0, speedShit / 2)
-            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+            change.z += speedShit/2
         end
         if PAD.IS_CONTROL_PRESSED(0, 36) then
-            local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, 0, 0, -speedShit / 2)
-            ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+            change.z -= speedShit/2
         end
+        local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, change.x, change.y, change.z)
+        ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
     end
 end, function()
     if statePoo ~= 1 then
