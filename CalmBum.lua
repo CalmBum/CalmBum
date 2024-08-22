@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.3.0"
+local SCRIPT_VERSION = "7.3.1"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -1677,6 +1677,86 @@ menu.toggle_loop(Npurge, "Purge Bike L", {"nospurgebikeleftcb"}, "Fleeex with Ta
         GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 1)
     end
 end)
+
+--Custom Purge--
+local custom_purge_menu = menu.list(Npurge, "Custom Purge", {}, "Customize your purge effect")
+
+local custom_purge = {
+    x = 0,
+    y = 0,
+    z = 0,
+    pitch = 0,
+    roll = 0,
+    yaw = 0
+}
+
+local bone_names = {
+    "windscreen", "exhaust", "wheel_lf", "wheel_rf", "wheel_lr", "wheel_rr", "chassis",
+    "bumper_f", "bumper_r", "wing_rf", "wing_lf", "bonnet", "roof", "engine",
+    "overheat", "petrolcap", "petroltank", "seat_dside_f", "seat_pside_f", "bodyshell"
+}
+local selected_bone = "windscreen"
+
+menu.list_select(custom_purge_menu, "Purge Bone", {}, "Select the bone for purge effect", bone_names, 1, function(index, value)
+    selected_bone = value
+end)
+
+local function custom_purge_effect(vehicle)
+    if ENTITY.DOES_ENTITY_EXIST(vehicle) and VEHICLE.IS_VEHICLE_DRIVEABLE(vehicle, false) and PED.IS_PED_IN_VEHICLE(players.user_ped(), vehicle, true) and not ENTITY.IS_ENTITY_DEAD(vehicle, false) then
+        local bone = ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, selected_bone)
+        GRAPHICS.USE_PARTICLE_FX_ASSET(nos_effect[1])
+        GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
+            nos_effect[2],
+            vehicle,
+            custom_purge.x, custom_purge.y, custom_purge.z, 
+            custom_purge.pitch, custom_purge.roll, custom_purge.yaw,
+            bone,
+            nos_effect[3],
+            false, false, false
+        )
+    end
+end
+
+local function clear_purge_effect(vehicle)
+    local bone = ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, selected_bone)
+    local bone_pos = ENTITY.GET_WORLD_POSITION_OF_ENTITY_BONE(vehicle, bone)
+    GRAPHICS.REMOVE_PARTICLE_FX_IN_RANGE(bone_pos.x, bone_pos.y, bone_pos.z, 10)
+end
+
+menu.toggle_loop(custom_purge_menu, "Custom Purge", {"nospurgecustomcar"}, "Purge NOS from a custom location on cars/trucks", function()
+    local vehicle = PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false)
+    
+    if PAD.IS_CONTROL_PRESSED(349, 349) then
+        custom_purge_effect(vehicle)
+        util.yield(500)
+    elseif PAD.IS_CONTROL_RELEASED(349, 349) or PAD.IS_CONTROL_RELEASED(37, 37) then
+        clear_purge_effect(vehicle)
+    end
+end)
+
+menu.slider(custom_purge_menu, "- Left / + Right", {"purge_x"}, "", -15, 15, 0, 1, function(val)
+    custom_purge.x = val / 10
+end)
+
+menu.slider(custom_purge_menu, "- Back / + Forward", {"purge_y"}, "", -25, 25, 0, 1, function(val)
+    custom_purge.y = val / 10
+end)
+
+menu.slider(custom_purge_menu, "- Down / + Up", {"purge_z"}, "", -15, 15, 0, 1, function(val)
+    custom_purge.z = val / 10
+end)
+
+menu.slider(custom_purge_menu, "Purge Pitch", {"purge_pitch"}, "", -180, 180, 0, 10, function(val)
+    custom_purge.pitch = val
+end)
+
+menu.slider(custom_purge_menu, "Purge Roll", {"purge_roll"}, "", -180, 180, 0, 10, function(val)
+    custom_purge.roll = val
+end)
+
+menu.slider(custom_purge_menu, "Purge Yaw", {"purge_yaw"}, "", -180, 180, 0, 10, function(val)
+    custom_purge.yaw = val
+end)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -1843,14 +1923,7 @@ end, function()
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
---Countermeasures (flares)-------------------------------------------------------------------------------------------------------------------------------------------------
 
-menu.toggle_loop(effectsList, "Countermeasure Flares", {"countermeasurecb"}, "Toggle with E or DPAD Right", function()
-    if PAD.IS_CONTROL_PRESSED(46, 46) then
-        local target = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(players.user_ped(), math.random(-5, 5), -3.5, math.random(-5, 5))
-        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target.x, target.y, target.z, target.x, target.y, target.z, 100.0, true, 1198879012, players.user_ped(), false, false, 10.0)
-    end
-end)
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -2364,6 +2437,99 @@ util.create_tick_handler(function()
 end)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+--Air Bag Suspension-----------------------------------------------------------------------------------------------------------
+local airRide = menu.list(miscList, "Air Ride", {}, "NOTICE: Disable NOS Purge to get full effect for now(will be fixed soon)")
+
+local airBagForce = 0
+local AirBagSound = {"core", "ent_sht_steam", 0.01}  
+local psi = 10.0 
+
+local airBagPsiDisplay = menu.action(airRide, "Air Bag PSI: 10.0", {}, "Displays current PSI. Find a nice level that doesn't shake the car", function() end)
+
+local airBagVehicles = {}
+local airBagEnabled = false
+
+local function applyAirBagEffect()
+    if not airBagEnabled then return end
+
+    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+    local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+
+    if vehicle ~= 0 then
+        airBagVehicles[vehicle] = true
+    end
+
+    for veh in pairs(airBagVehicles) do
+        if ENTITY.DOES_ENTITY_EXIST(veh) then
+            airBagForce = (10 - psi) * 2.0  -- 10 PSI = 0 force, 0 PSI = 10 force; adjusted force multiplier
+            local vel = ENTITY.GET_ENTITY_VELOCITY(veh)
+            ENTITY.APPLY_FORCE_TO_ENTITY(veh, 2, 0, 0, -airBagForce - vel['z'], 0, 0, 0, 0, true, false, true, false, true)
+        else
+            airBagVehicles[veh] = nil
+        end
+    end
+    menu.set_menu_name(airBagPsiDisplay, string.format("Air Bag PSI: %.1f", psi))
+end
+
+menu.toggle_loop(airRide, "Enable Air Ride", {"airbagsusp"}, "BEWARE! This will change the handling of your vehicle in a dramatic way!", function()
+    airBagEnabled = true
+    applyAirBagEffect()
+end, function()
+    airBagEnabled = false
+    airBagVehicles = {}
+    util.toast("Air Ride Suspension disabled.")
+end)
+
+local function playSteamEffect(vehicle)
+    if vehicle == 0 then return end
+
+    local bone = ENTITY.GET_ENTITY_BONE_INDEX_BY_NAME(vehicle, "transmission_m")
+    GRAPHICS.USE_PARTICLE_FX_ASSET(AirBagSound[1])
+    local effectId = GRAPHICS.START_PARTICLE_FX_NON_LOOPED_ON_ENTITY_BONE(
+        AirBagSound[2],
+        vehicle,
+        0, 0.5, -0.25,
+        50.0, 0.0, 50 - airBagForce,
+        bone,
+        AirBagSound[3],
+        false, false, false
+    ) 
+end
+
+
+menu.action(airRide, "Air Out", {"airout"}, "Each click is 1/2 a PSI release", function()
+    if not airBagEnabled then
+        util.toast("Air Ride Suspension is not enabled.")
+        return
+    end
+
+    if psi > 0 then
+        psi = psi - 0.5
+        util.toast(string.format("PSI: %.1f", psi))
+    end
+    
+    if psi <= 0 then
+        psi = 0  
+        util.toast("PSI is at minimum")
+    end
+
+    local vehicle = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false)
+    playSteamEffect(vehicle)
+end)
+
+menu.action(airRide, "Refill Tanks", {"refilltanks"}, "Refills tanks to full", function()
+    if not airBagEnabled then
+        util.toast("Air Ride Suspension is not enabled.")
+        return
+    end
+
+    psi = 10.0 
+    util.toast("Tanks refilled to 10 PSI")
+
+    local vehicle = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), false)
+    playSteamEffect(vehicle)
+end)
+
 --------- flash high beams --------------------------------------------------------------------------------------------------------------------------------------
 menu.action(miscList, "Flash Highbeam", {"highbeamcb"}, "Press to flash your highbeams (recommend to bind to hotkey)", function()
     local veh = get_user_car_id()
@@ -2407,34 +2573,26 @@ end)
 
 
 --Horn Hop----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-local hornHop = menu.list(miscList, "Horn Hop")
-local hornHopForce = 1.5
+local hornHopForce = 0
 
-menu.toggle_loop(hornHop, "Horn Hop", {"hornhopcb"}, "", function()
-    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_PRESSED(86, 86) then
-        local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-        ENTITY.APPLY_FORCE_TO_ENTITY(vehicle, 1, 0.0, 0.0, hornHopForce, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
+menu.slider(miscList, "Horn Hop Force", {"hornhopforcecb"}, "Set Horn Hop Force (0 to disable)", 0, 20, 0, 1, function(val)
+    hornHopForce = val / 25
+end)
+
+util.create_thread(function()
+    while true do
+        if hornHopForce > 0 then
+            local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+            if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) and PAD.IS_CONTROL_PRESSED(86, 86) then
+                local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
+                ENTITY.APPLY_FORCE_TO_ENTITY(vehicle, 1, 0.0, 0.0, hornHopForce, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
+            end
+        end
+        util.yield()
     end
 end)
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-menu.slider(hornHop, "Horn Hop Force", {"hornhopforcecb"}, "", 1, 10, 3, 1, function(val)
-    hornHopForce = val / 2
-end)
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
--- Stick to the ground---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-menu.toggle_loop(miscList, "Sticky Surface", {"stickysurfacecb"}, "You stick to the ground and walls but enjoy those roll overs lol", function()
-    local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    if PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
-        local vehicle = PED.GET_VEHICLE_PED_IS_IN(targetPed, false)
-        local vel = ENTITY.GET_ENTITY_VELOCITY(vehicle)
-        vel['z'] = -vel['z']
-        ENTITY.APPLY_FORCE_TO_ENTITY(vehicle, 2, 0, 0, -50 -vel['z'], 0, 0, 0, 0, true, false, true, false, true)
-    end
-end)
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 --Horn Spam---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2667,8 +2825,10 @@ end)
 
 
 --Player Shit-----------------------------------------------------------------------------------------------------------------
-local shidded = false
-menu.action(playerList, "Take A Shit", {"shitcb"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
+local shitList = menu.list(playerList,"Shit List", {}, "Where legends are born")
+
+menu.action(shitList, "Take A Shit", {"shitcb"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
+
     local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
     if not PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
         STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
@@ -2684,10 +2844,9 @@ menu.action(playerList, "Take A Shit", {"shitcb"}, "You see that ugly ass car? G
         NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(object_)
         ENTITY.APPLY_FORCE_TO_ENTITY(object_, 3, 0, 0, -10, 0, 0, 0, 0, false)
     end
-    shidded = true
 end)
 
-menu.action(playerList, "Extra Muddy Poo", {"shitmudcb"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
+menu.action(shitList, "Extra Muddy Poo", {"shitmudcb"}, "You see that ugly ass car? Go pop a squat and summon a mud monster!", function()
     local targetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
     if not PED.IS_PED_IN_ANY_VEHICLE(targetPed, false) then
         STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
@@ -2695,7 +2854,9 @@ menu.action(playerList, "Extra Muddy Poo", {"shitmudcb"}, "You see that ugly ass
             util.yield(0)
         end
         TASK.TASK_PLAY_ANIM(targetPed, "missfbi3ig_0", "shit_loop_trev", 8.0, 8.0, 2000, 0, 0, false, false, false)
+        
         util.yield(500)
+        
         local bone = PED.GET_PED_BONE_INDEX(targetPed, 11816)
         STREAMING.REQUEST_NAMED_PTFX_ASSET("core")
         while not STREAMING.HAS_NAMED_PTFX_ASSET_LOADED("core") do
@@ -2711,56 +2872,38 @@ menu.action(playerList, "Extra Muddy Poo", {"shitmudcb"}, "You see that ugly ass
             1.0,
             false, false, false
         )
+        
         util.yield(500)
+        
         local pos = ENTITY.GET_ENTITY_COORDS(targetPed)
         local object_ = OBJECT.CREATE_OBJECT(MISC.GET_HASH_KEY("prop_big_shit_02"), pos.x, pos.y, pos.z - 0.6, true, true)
         NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(object_)
         ENTITY.SET_ENTITY_DYNAMIC(object_, true)
         ENTITY.APPLY_FORCE_TO_ENTITY(object_, 1, 0, 0, -10, 0, 0, 0, 0, false, false, true, false, true)
     end
-    shidded = true
 end)
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+menu.action(shitList, "Clean Up Poop", {"cleanpoopcb"}, "Removes the evidence", function()
+    local poopHash = MISC.GET_HASH_KEY("prop_big_shit_02")
+    local poopObjects = entities.get_all_objects_as_handles()
+    local cleanedCount = 0
+
+    for _, object in ipairs(poopObjects) do
+        if ENTITY.GET_ENTITY_MODEL(object) == poopHash then
+            entities.delete_by_handle(object)
+            cleanedCount = cleanedCount + 1
+        end
+    end
+
+    util.toast("Cleaned up " .. cleanedCount .. " poop objects!")
+end)
 
 --Magic Poo---------------------------------------------------------------------------------------------------------------
-local statePoo = 0
-local objectPoo = 0
-local deadPoo = false
-local fastPoo = 0
-local speedPoo = 0.2
-local stateShit = 0
-local objectShit = 0
-local deadShit = false
-local fastShit = 0
-local speedShit = 0.2
+local state = 0
+local object = 0
 
-menu.toggle_loop(playerList, "Magic Poo", {"magicpoocb"}, "Behold! Thine magical poo!", function()
-    if stateShit == 1 then
-        util.toast("Cannot use with shitter ride")
-        menu.trigger_commands("magicpoocb off")
-        return
-    end
-    if ENTITY.IS_ENTITY_DEAD(players.user_ped(), true) and !deadPoo then
-        deadPoo = true
-        TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
-        ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
-        util.yield(1000)
-        ENTITY.SET_ENTITY_VISIBLE(objectPoo, false, false)
-        entities.delete_by_handle(objectPoo)
-        statePoo = -1
-    end
-    if !ENTITY.IS_ENTITY_DEAD(players.user_ped(), true) and deadPoo then
-        deadPoo = false
-        statePoo = 0
-    end
-	if statePoo == 0 or shidded then
-        if objectPoo ~= 0 then
-            TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
-            ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
-            ENTITY.SET_ENTITY_VISIBLE(objectPoo, false, false)
-            entities.delete_by_handle(objectPoo)
-        end
+menu.toggle_loop(shitList, "Magic Poo", {"magicpoocb"}, "Behold! Thine magical poo!", function()
+	if state == 0 then
 		local objHash <const> = util.joaat("prop_big_shit_02")
 		util.request_model(objHash)
 		STREAMING.REQUEST_ANIM_DICT("missfbi3ig_0")
@@ -2770,94 +2913,60 @@ menu.toggle_loop(playerList, "Magic Poo", {"magicpoocb"}, "Behold! Thine magical
 		local localPed = players.user_ped()
 		local pos = ENTITY.GET_ENTITY_COORDS(localPed, false)
 		TASK.CLEAR_PED_TASKS_IMMEDIATELY(localPed)
-		objectPoo = entities.create_object(objHash, pos)
+		object = entities.create_object(objHash, pos)
 		ENTITY.ATTACH_ENTITY_TO_ENTITY(
-			localPed, objectPoo, 0, 0, -0.2, 1.0, 0.0, 0.0, 0.0, false, true, false, false, 0, true, 0
+			localPed, object, 0, 0, -0.2, 1.0, 0.0, 0.0, 0.0, false, true, false, false, 0, true, 0
 		)
-		ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(objectPoo, false, false)
+		ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(object, false, false)
 		TASK.TASK_PLAY_ANIM(localPed, "missfbi3ig_0", "shit_loop_trev", 8.0, -8.0, -1, 1, 0.0, false, false, false)
-		statePoo = 1
-        shidded = false
-	elseif statePoo == 1 then
-        local objPos = ENTITY.GET_ENTITY_COORDS(objectPoo, false)
-        local camRot = CAM.GET_GAMEPLAY_CAM_ROT(0)
-        ENTITY.SET_ENTITY_ROTATION(objectPoo, camRot.x, camRot.y, camRot.z, 0, true)
-        local forwardV = ENTITY.GET_ENTITY_FORWARD_VECTOR(players.user_ped())
-        forwardV.z = 0.0
-        local delta = v3.new(0, 0, 0)
-        if PAD.IS_CONTROL_PRESSED(0, 61) then
-            if fastPoo < 100 then
-                fastPoo += 1
-                speedPoo = 0.5
-            elseif speedPoo < 1.5 then
-                speedPoo += 0.005
-            end
-        elseif fastPoo > 0 then
-            fastPoo = 0
-            speedPoo = 0.2
-        else
-            speedPoo = 0.2
-        end
-        if PAD.IS_CONTROL_PRESSED(0, 32) then
-            change.y -= speedPoo
-        end
-        if PAD.IS_CONTROL_PRESSED(0, 33)  then
-            change.y += speedPoo
-        end
-        if PAD.IS_CONTROL_PRESSED(0, 34)  then
-            change.x += speedPoo
-        end
-        if PAD.IS_CONTROL_PRESSED(0, 35)  then
-            change.x -= speedPoo
-        end
-        if PAD.IS_DISABLED_CONTROL_PRESSED(0, 22) then
-            change.z += speedPoo/2
-        end
-        if PAD.IS_CONTROL_PRESSED(0, 36) then
-            change.z -= speedPoo/2
-        end
-        local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectPoo, change.x, change.y, change.z)
-        ENTITY.SET_ENTITY_COORDS(objectPoo, new.x, new.y, new.z, false, false, false, false)
+		state = 1
+
+	elseif state == 1 then
+		HUD.DISPLAY_SNIPER_SCOPE_THIS_FRAME()
+		local objPos = ENTITY.GET_ENTITY_COORDS(object, false)
+		local camrot = CAM.GET_GAMEPLAY_CAM_ROT(0)
+		ENTITY.SET_ENTITY_ROTATION(object, 0, 0, camrot.z, 0, true)
+		local forwardV = ENTITY.GET_ENTITY_FORWARD_VECTOR(players.user_ped())
+		forwardV.z = 0.0
+		local delta = v3.new(0, 0, 0)
+		local speed = 0.2
+		if PAD.IS_CONTROL_PRESSED(0, 61) then
+			speed = 1.5
+		end
+		if PAD.IS_CONTROL_PRESSED(0, 32) then
+			delta = v3.new(forwardV)
+			delta:mul(speed)
+		end
+		if PAD.IS_CONTROL_PRESSED(0, 130)  then
+			delta = v3.new(forwardV)
+			delta:mul(-speed)
+		end
+		if PAD.IS_DISABLED_CONTROL_PRESSED(0, 22) then
+			delta.z = speed
+		end
+		if PAD.IS_CONTROL_PRESSED(0, 36) then
+			delta.z = -speed
+		end
+		local newPos = v3.new(objPos)
+		newPos:add(delta)
+		ENTITY.SET_ENTITY_COORDS(object, newPos.x, newPos.y, newPos.z, false, false, false, false)
+        
 	end
 end, function ()
-    if stateShit ~= 1 then
-        TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
-        ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
-        ENTITY.SET_ENTITY_VISIBLE(objectPoo, false, false)
-        entities.delete_by_handle(objectPoo)
-        statePoo = 0
-    end
+	TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
+	ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
+	ENTITY.SET_ENTITY_VISIBLE(object, false, false)
+	entities.delete_by_handle(object)
+	state = 0
 end)
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+-----------------------------------------------------------------------------------------------------------------------------------
 
 --Shit Rider---------------------------------------------------------------------------------------------------------------------------
-menu.toggle_loop(playerList, "Shitter ride", {"shitterridecb"}, "Ride on the most magnificent of thrones", function()
-    if statePoo == 1 then
-        util.toast("Cannot use with magic poo")
-        menu.trigger_commands("shitterridecb off")
-        return
-    end
-    if ENTITY.IS_ENTITY_DEAD(players.user_ped(), true) and !deadShit then
-        deadShit = true
-        TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
-        ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
-        util.yield(1000)
-        ENTITY.SET_ENTITY_VISIBLE(objectShit, false, false)
-        entities.delete_by_handle(objectShit)
-        stateShit = -1
-    end
-    if !ENTITY.IS_ENTITY_DEAD(players.user_ped(), true) and deadShit then
-        deadShit = false
-        stateShit = 0
-    end
-    if stateShit == 0 or shidded then
-        if objectShit ~= 0 then
-            TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
-            ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
-            ENTITY.SET_ENTITY_VISIBLE(objectShit, false, false)
-            entities.delete_by_handle(objectShit)
-        end
+local stateShit = 0
+local objectShit = 0
+
+menu.toggle_loop(shitList, "Shitter ride", {"shitterridecb"}, "Ride on the most magnificent of thrones", function()
+    if stateShit == 0 then
         local objHash <const> = util.joaat("prop_ld_toilet_01")
         util.request_model(objHash)
         STREAMING.REQUEST_ANIM_DICT("timetable@ron@ig_3_couch")
@@ -2874,57 +2983,44 @@ menu.toggle_loop(playerList, "Shitter ride", {"shitterridecb"}, "Ride on the mos
         ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(objectShit, false, false)
         TASK.TASK_PLAY_ANIM(localPed, "timetable@ron@ig_3_couch", "Base", 8.0, -8.0, -1, 1, 0.0, false, false, false)
         stateShit = 1
-        shidded = false
+
     elseif stateShit == 1 then
+        HUD.DISPLAY_SNIPER_SCOPE_THIS_FRAME()
         local objPos = ENTITY.GET_ENTITY_COORDS(objectShit, false)
-        local camRot = CAM.GET_GAMEPLAY_CAM_ROT(0)
-        ENTITY.SET_ENTITY_ROTATION(objectShit, -camRot.x, camRot.y, camRot.z - 180, 0, true)
+        local camrot = CAM.GET_GAMEPLAY_CAM_ROT(0)
+        ENTITY.SET_ENTITY_ROTATION(objectShit, 0, 0, camrot.z - 180, 0, true)
         local forwardV = ENTITY.GET_ENTITY_FORWARD_VECTOR(players.user_ped())
         forwardV.z = 0.0
         local delta = v3.new(0, 0, 0)
+        local speed = 0.2
         if PAD.IS_CONTROL_PRESSED(0, 61) then
-            if fastShit < 100 then
-                fastShit += 1
-                speedShit = 0.5
-            elseif speedShit < 1.5 then
-                speedShit += 0.005
-            end
-        elseif fastShit > 0 then
-            fastShit = 0
-            speedShit = 0.2
-        else
-            speedShit = 0.2
+            speed = 1.5
         end
         if PAD.IS_CONTROL_PRESSED(0, 32) then
-            change.y -= speedShit
+            delta = v3.new(forwardV)
+            delta:mul(speed)
         end
-        if PAD.IS_CONTROL_PRESSED(0, 33)  then
-            change.y += speedShit
-        end
-        if PAD.IS_CONTROL_PRESSED(0, 34)  then
-            change.x += speedShit
-        end
-        if PAD.IS_CONTROL_PRESSED(0, 35)  then
-            change.x -= speedShit
+        if PAD.IS_CONTROL_PRESSED(0, 130)  then
+            delta = v3.new(forwardV)
+            delta:mul(-speed)
         end
         if PAD.IS_DISABLED_CONTROL_PRESSED(0, 22) then
-            change.z += speedShit/2
+            delta.z = speed
         end
         if PAD.IS_CONTROL_PRESSED(0, 36) then
-            change.z -= speedShit/2
+            delta.z = -speed
         end
-        local new = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(objectShit, change.x, change.y, change.z)
-        ENTITY.SET_ENTITY_COORDS(objectShit, new.x, new.y, new.z, false, false, false, false)
+        local newPos = v3.new(objPos)
+        newPos:add(delta)
+        ENTITY.SET_ENTITY_COORDS(objectShit, newPos.x, newPos.y, newPos.z, false, false, false, false)
+
     end
-end, function()
-    if statePoo ~= 1 then
-        TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
-        ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
-        ENTITY.SET_ENTITY_VISIBLE(objectShit, false, false)
-        entities.delete_by_handle(objectShit)
-        objectShit = 0
-        stateShit = 0
-    end
+end, function ()
+    TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
+    ENTITY.DETACH_ENTITY(players.user_ped(), true, false)
+    ENTITY.SET_ENTITY_VISIBLE(objectShit, false, false)
+    entities.delete_by_handle(objectShit)
+    stateShit = 0
 end)
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
