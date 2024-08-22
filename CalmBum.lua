@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.3.1"
+local SCRIPT_VERSION = "7.3.2"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -3228,14 +3228,112 @@ menu.list_action(lradio, music.customRadio, {""}, "", customRadioOptions, functi
     end
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------
+--Trippify----------------------------------------------------------------------------------------------------------------------------------------
+tripList = menu.list(worldList, "Trippify", {"trippifycb"}, "Whoa... I think there was something in that hippie I just ate... my hands are huuuuge")
 
---Aesthetify----------------------------------------------------------------------------------------------------------------------------------------
-menu.toggle(worldList, "Aesthetify", {"aesthetifycb"}, "Whooaa I think there was something in that hippie I just ate... my hands are huuuuge", function(on)
+-- Purple Trip
+menu.toggle(tripList, "Purple Trip", {"purpletripcb"}, "Experience the world through a purple haze.", function(on)
     if on then
         menu.trigger_commands("shader glasses_purple")
         menu.trigger_commands("aestheticcolourred 255")
         menu.trigger_commands("aestheticcolourgreen 0")
         menu.trigger_commands("aestheticcolourblue 255")
+        menu.trigger_commands("aestheticrange 10000")
+        menu.trigger_commands("aestheticintensity 30")
+        menu.trigger_commands("time 19")
+        menu.trigger_commands("locktime")
+    else
+        menu.trigger_commands("shader off")
+    end
+end)
+
+-- Red Trip
+menu.toggle(tripList, "Red Trip", {"redtripcb"}, "Experience the world through a red filter.", function(on)
+    if on then
+        menu.trigger_commands("shader glasses_red")
+        menu.trigger_commands("aestheticcolourred 255")
+        menu.trigger_commands("aestheticcolourgreen 0")
+        menu.trigger_commands("aestheticcolourblue 0")
+        menu.trigger_commands("aestheticrange 10000")
+        menu.trigger_commands("aestheticintensity 30")
+        menu.trigger_commands("time 19")
+        menu.trigger_commands("locktime")
+    else
+        menu.trigger_commands("shader off")
+    end
+end)
+
+-- Blue Trip
+menu.toggle(tripList, "Blue Trip", {"bluetripcb"}, "Experience the world through a blue filter.", function(on)
+    if on then
+        menu.trigger_commands("shader glasses_blue")
+        menu.trigger_commands("aestheticcolourred 0")
+        menu.trigger_commands("aestheticcolourgreen 0")
+        menu.trigger_commands("aestheticcolourblue 255")
+        menu.trigger_commands("aestheticrange 10000")
+        menu.trigger_commands("aestheticintensity 30")
+        menu.trigger_commands("time 19")
+        menu.trigger_commands("locktime")
+    else
+        menu.trigger_commands("shader off")
+    end
+end)
+
+-- Green Trip
+menu.toggle(tripList, "Green Trip", {"greentripcb"}, "Experience the world through a green filter.", function(on)
+    if on then
+        menu.trigger_commands("shader glasses_green")
+        menu.trigger_commands("aestheticcolourred 0")
+        menu.trigger_commands("aestheticcolourgreen 255")
+        menu.trigger_commands("aestheticcolourblue 0")
+        menu.trigger_commands("aestheticrange 10000")
+        menu.trigger_commands("aestheticintensity 30")
+        menu.trigger_commands("time 19")
+        menu.trigger_commands("locktime")
+    else
+        menu.trigger_commands("shader off")
+    end
+end)
+
+-- Yellow Trip
+menu.toggle(tripList, "Yellow Trip", {"yellowtripcb"}, "Experience the world through a yellow filter.", function(on)
+    if on then
+        menu.trigger_commands("shader glasses_yellow")
+        menu.trigger_commands("aestheticcolourred 255")
+        menu.trigger_commands("aestheticcolourgreen 255")
+        menu.trigger_commands("aestheticcolourblue 0")
+        menu.trigger_commands("aestheticrange 10000")
+        menu.trigger_commands("aestheticintensity 30")
+        menu.trigger_commands("time 19")
+        menu.trigger_commands("locktime")
+    else
+        menu.trigger_commands("shader off")
+    end
+end)
+
+-- Orange Trip
+menu.toggle(tripList, "Orange Trip", {"orangetripcb"}, "Experience the world through an orange filter.", function(on)
+    if on then
+        menu.trigger_commands("shader glasses_orange")
+        menu.trigger_commands("aestheticcolourred 255")
+        menu.trigger_commands("aestheticcolourgreen 165")
+        menu.trigger_commands("aestheticcolourblue 0")
+        menu.trigger_commands("aestheticrange 10000")
+        menu.trigger_commands("aestheticintensity 30")
+        menu.trigger_commands("time 19")
+        menu.trigger_commands("locktime")
+    else
+        menu.trigger_commands("shader off")
+    end
+end)
+
+-- Pink Trip
+menu.toggle(tripList, "Pink Trip", {"pinktripcb"}, "Experience the world through a pink filter.", function(on)
+    if on then
+        menu.trigger_commands("shader glasses_pink")
+        menu.trigger_commands("aestheticcolourred 255")
+        menu.trigger_commands("aestheticcolourgreen 105")
+        menu.trigger_commands("aestheticcolourblue 180")
         menu.trigger_commands("aestheticrange 10000")
         menu.trigger_commands("aestheticintensity 30")
         menu.trigger_commands("time 19")
