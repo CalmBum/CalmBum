@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.3.2"
+local SCRIPT_VERSION = "7.3.3"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -2607,8 +2607,31 @@ end, function()
     VEHICLE.SET_VEHICLE_MOD(get_user_car_id(), 14, clone.mods[15].val, false)
 end)
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--Remove Doors-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+local function removeDoors(vehicle)
+    for i = 0, 3 do 
+        if VEHICLE.GET_IS_DOOR_VALID(vehicle, i) then
+            VEHICLE.SET_VEHICLE_DOOR_BROKEN(vehicle, i, true)
+        end
+    end
+end
 
+local function removeDoorsHere()
+    local playerPed = PLAYER.PLAYER_PED_ID()
+    local vehicle = PED.GET_VEHICLE_PED_IS_USING(playerPed, false)
 
+    if vehicle ~= 0 then
+        removeDoors(vehicle)
+    else
+        util.toaste("You're not in a vehicle!")
+    end
+end
+
+menu.action(miscList, "Remove Doors", {"RMD"}, "", function()
+    removeDoorsHere()
+end, false)
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Stopwatch ---------------------------------------------------------------------------------------------------------------------------------------------------
 -- Stopwatch variables
 local stopwatch_running = false
