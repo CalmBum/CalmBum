@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.3.3"
+local SCRIPT_VERSION = "7.3.4"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -1382,7 +1382,69 @@ menu.toggle_loop(transList, "Smooth shifting", {"smoothshiftcb"}, "Prevents the 
     end
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+--Camera Options-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+local camList = menu.list(tuningList, "Camera Stuff")
+
+--Drift Cam Assist------------------------------------------------------------------------------------------------------------------------------------------------
+menu.toggle_loop(camList, "Drift Cam Assist", {"driftcamcb"}, "Prevents the camera from going crazy every time you tap ebrake", function()
+    if onFoot() or !driver() then
+        return
+    end
+    local moving = ENTITY.GET_ENTITY_SPEED(get_user_car_id())
+    if moving > 5 and PAD.GET_CONTROL_NORMAL(1, 1) == 0 then
+        PAD.SET_CONTROL_VALUE_NEXT_FRAME(2, 2, -0.26)
+    end
+end)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Camera Lock--
+menu.toggle(camList, "Cam Lock", {"camlock"}, "Lock the camera to the player or vehicles rotation", function()
+    menu.trigger_commands("lockgameplayheading")
+    util.toast("Camera Toggled")
+end)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--Camera FOV--
+local currentFOV = 60 
+local fovLocked = false
+
+menu.toggle(camList, "FOV", {""}, "Need to be in a vehicle", function(state)
+    if state then
+        menu.trigger_commands("fovtpinveh " .. currentFOV)
+        util.toast("FOV set to " .. currentFOV)
+        fovLocked = true
+    else
+        menu.trigger_commands("fovtpinveh default")
+        util.toast("FOV Reset to Default")
+        fovLocked = false
+    end
+end)
+
+menu.slider(camList, "Adjust FOV", {"fovadjust"}, "Adjust FOV between 15 and 120 in increments of 15", 15, 120, currentFOV, 15, function(value)
+    currentFOV = value
+    if fovLocked then
+        menu.trigger_commands("fovtpinveh " .. value)
+        util.toast("FOV adjusted to " .. value)
+    end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--Camera Distance--
+local cameraDistance = 1.0
+
+menu.toggle(camList, "Toggle Distance", {""}, "Adjust how far the camera is from the player", function(state)
+    if not state then
+        cameraDistance = 1.0
+        menu.trigger_commands("cameradistance " .. cameraDistance)
+    end
+end)
+
+menu.slider(camList, "Camera Distance", {"cameradistance"}, "Adjust the camera distance.", 1, 100, 10, 1, function(value)
+    cameraDistance = value / 10.0
+    menu.trigger_commands("cameradistance " .. cameraDistance)
+end)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Better backies (mostly stop brakes being applied when on throttle moving backwards) -------------------------------------------------------------------------
 local stopIt = false
@@ -1438,21 +1500,6 @@ menu.toggle_loop(tuningList, "Better Backies", {"backiescb"}, "With this enabled
     end
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
---Drift Cam Assist------------------------------------------------------------------------------------------------------------------------------------------------
-menu.toggle_loop(tuningList, "Drift Cam Assist", {"driftcamcb"}, "Prevents the camera from going crazy every time you tap ebrake", function()
-    if onFoot() or !driver() then
-        return
-    end
-    local moving = ENTITY.GET_ENTITY_SPEED(get_user_car_id())
-    if moving > 5 and PAD.GET_CONTROL_NORMAL(1, 1) == 0 then
-        PAD.SET_CONTROL_VALUE_NEXT_FRAME(2, 2, -0.26)
-    end
-end)
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
 --Clutch Kick-----------------------------------------------------------------------------------------------------------------------------------------------------------
 local clutchKicked = false
 local clutchCounter = 0
