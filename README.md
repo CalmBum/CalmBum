@@ -6,13 +6,14 @@
 ░╚════╝░╚═╝░░╚═╝╚══════╝╚═╝░░░░░╚═╝╚═════╝░░╚═════╝░╚═╝░░░░░╚═╝
 
 
-This is a passion project from SuccMyBum and _-Cal-_
+This is a passion project from SuccMyBum and Cal
 
 Artwork by Tilian
 
-The script is for car enthusiasts
+The script is for car enthusiasts using Stand mod menu in GTA5
 
 
-
-
-Make sure to place the folder named CalmBum into your resources folder
+Place the folder named 'CalmBum' into your lib folder
+Go into the repo within Stand and make sure you have "pretty.json" enabled under dependencies
+Enabled internet access
+Enjoy :)
