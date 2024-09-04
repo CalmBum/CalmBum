@@ -3581,6 +3581,44 @@ menu.action(trafficList, "Cleanup Objects", {"cleanobjectscb"}, "Remove any near
     MISC.CLEAR_AREA_OF_OBJECTS(pos.X, pos.Y, pos.Z, 250.0, 2)
 end)
 
+menu.toggle_loop(trafficList, "No Hesi Mode", {}, "Still testing. Traffic should be less agro and won't swerve to hit you", function()
+    local peds = entities.get_all_peds_as_handles()
+    for _, ped in ipairs(peds) do
+        if not PED.IS_PED_A_PLAYER(ped) and PED.IS_PED_IN_ANY_VEHICLE(ped, false) then
+            local vehicle = PED.GET_VEHICLE_PED_IS_IN(ped, false)
+            PED.SET_PED_CONFIG_FLAG(ped, 32, true)  --DisablePanicInVehicle
+            PED.SET_PED_CONFIG_FLAG(ped, 281, true) --DisablePanic
+            PED.SET_PED_CONFIG_FLAG(ped, 42, true)  --DisableVehicleAvoidance
+            PED.SET_PED_CONFIG_FLAG(ped, 292, true) --DisableReactionToBeingHit
+            PED.SET_PED_CONFIG_FLAG(ped, 104, true) --DisablePedAvoidance
+            PED.SET_PED_CONFIG_FLAG(ped, 118, true) --DisablePlayerVehicleCollisionReactions
+            PED.SET_PED_CONFIG_FLAG(ped, 208, true) --DisableVehicleCollisionReactions
+            PED.SET_PED_CONFIG_FLAG(ped, 170, true) --DisableVehicleHorn
+            PED.SET_PED_CONFIG_FLAG(ped, 429, true) --DisablePlayerVehicleCollisionReactions
+            PED.SET_PED_CONFIG_FLAG(ped, 430, true) --DisablePlayerCollisionReactions
+            PED.SET_PED_CONFIG_FLAG(ped, 203, true) --Avoidance_ignored_by_All
+            PED.SET_PED_CONFIG_FLAG(ped, 204, true) --Avoidance_ignored_by_All_2
+            PED.SET_PED_CONFIG_FLAG(ped, 287, true) --DisableExplosionReactions
+            PED.SET_PED_CONFIG_FLAG(ped, 33, true)  --DisableGunshotReactions
+            PED.SET_PED_CONFIG_FLAG(ped, 122, true) --DisableMeleeReactions
+            PED.SET_PED_CONFIG_FLAG(ped, 292, true) --DisableReactionToBeingHit
+            PED.SET_PED_FLEE_ATTRIBUTES(ped, 0, false) -- Disable fleeing
+            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
+            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 5, true)
+            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 17, true)
+            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 1424, true) --IgnoreAllPlayers
+            PED.SET_DRIVER_AGGRESSIVENESS(ped, 0.0)
+            PED.SET_DRIVER_ABILITY(ped, 0.0)
+            PED.SET_PED_CAN_BE_TARGETTED(ped, false) 
+            PED.SET_PED_CAN_BE_DRAGGED_OUT(ped, false) 
+            PED.SET_PED_CAN_RAGDOLL(ped, false) 
+            PED.SET_PED_SUFFERS_CRITICAL_HITS(ped, false) 
+            PED.SET_PED_CAN_PLAY_AMBIENT_ANIMS(ped, false) 
+            PED.SET_PED_CAN_PLAY_GESTURE_ANIMS(ped, false)
+        end
+    end
+    util.yield(20)
+end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 --Floating Island------------------------------------------------------------------------------------------------------------------------------------------
