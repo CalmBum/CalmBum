@@ -3582,42 +3582,56 @@ menu.action(trafficList, "Cleanup Objects", {"cleanobjectscb"}, "Remove any near
 end)
 
 menu.toggle_loop(trafficList, "No Hesi Mode", {}, "Still testing. Traffic should be less agro and won't swerve to hit you", function()
+    local playerPed = PLAYER.PLAYER_PED_ID()
+    local playerPos = ENTITY.GET_ENTITY_COORDS(playerPed, true)
+    local radius = 500 -- Adjusted radius to match the logic from the other snippet
+
     local peds = entities.get_all_peds_as_handles()
     for _, ped in ipairs(peds) do
         if not PED.IS_PED_A_PLAYER(ped) and PED.IS_PED_IN_ANY_VEHICLE(ped, false) then
-            local vehicle = PED.GET_VEHICLE_PED_IS_IN(ped, false)
-            PED.SET_PED_CONFIG_FLAG(ped, 32, true)  --DisablePanicInVehicle
-            PED.SET_PED_CONFIG_FLAG(ped, 281, true) --DisablePanic
-            PED.SET_PED_CONFIG_FLAG(ped, 42, true)  --DisableVehicleAvoidance
-            PED.SET_PED_CONFIG_FLAG(ped, 292, true) --DisableReactionToBeingHit
-            PED.SET_PED_CONFIG_FLAG(ped, 104, true) --DisablePedAvoidance
-            PED.SET_PED_CONFIG_FLAG(ped, 118, true) --DisablePlayerVehicleCollisionReactions
-            PED.SET_PED_CONFIG_FLAG(ped, 208, true) --DisableVehicleCollisionReactions
-            PED.SET_PED_CONFIG_FLAG(ped, 170, true) --DisableVehicleHorn
-            PED.SET_PED_CONFIG_FLAG(ped, 429, true) --DisablePlayerVehicleCollisionReactions
-            PED.SET_PED_CONFIG_FLAG(ped, 430, true) --DisablePlayerCollisionReactions
-            PED.SET_PED_CONFIG_FLAG(ped, 203, true) --Avoidance_ignored_by_All
-            PED.SET_PED_CONFIG_FLAG(ped, 204, true) --Avoidance_ignored_by_All_2
-            PED.SET_PED_CONFIG_FLAG(ped, 287, true) --DisableExplosionReactions
-            PED.SET_PED_CONFIG_FLAG(ped, 33, true)  --DisableGunshotReactions
-            PED.SET_PED_CONFIG_FLAG(ped, 122, true) --DisableMeleeReactions
-            PED.SET_PED_CONFIG_FLAG(ped, 292, true) --DisableReactionToBeingHit
-            PED.SET_PED_FLEE_ATTRIBUTES(ped, 0, false) -- Disable fleeing
-            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
-            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 5, true)
-            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 17, true)
-            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 1424, true) --IgnoreAllPlayers
-            PED.SET_DRIVER_AGGRESSIVENESS(ped, 0.0)
-            PED.SET_DRIVER_ABILITY(ped, 0.0)
-            PED.SET_PED_CAN_BE_TARGETTED(ped, false) 
-            PED.SET_PED_CAN_BE_DRAGGED_OUT(ped, false) 
-            PED.SET_PED_CAN_RAGDOLL(ped, false) 
-            PED.SET_PED_SUFFERS_CRITICAL_HITS(ped, false) 
-            PED.SET_PED_CAN_PLAY_AMBIENT_ANIMS(ped, false) 
-            PED.SET_PED_CAN_PLAY_GESTURE_ANIMS(ped, false)
+            local pedPos = ENTITY.GET_ENTITY_COORDS(ped, true)
+            if SYSTEM.VDIST2(playerPos.x, playerPos.y, playerPos.z, pedPos.x, pedPos.y, pedPos.z) <= radius * radius then
+                local vehicle = PED.GET_VEHICLE_PED_IS_IN(ped, false)
+                PED.SET_PED_CONFIG_FLAG(ped, 32, true)  --DisablePanicInVehicle
+                PED.SET_PED_CONFIG_FLAG(ped, 281, true) --DisablePanic
+                PED.SET_PED_CONFIG_FLAG(ped, 42, true)  --DisableVehicleAvoidance
+                PED.SET_PED_CONFIG_FLAG(ped, 292, true) --DisableReactionToBeingHit
+                PED.SET_PED_CONFIG_FLAG(ped, 104, true) --DisablePedAvoidance
+                PED.SET_PED_CONFIG_FLAG(ped, 118, true) --DisablePlayerVehicleCollisionReactions
+                PED.SET_PED_CONFIG_FLAG(ped, 208, true) --DisableVehicleCollisionReactions
+                PED.SET_PED_CONFIG_FLAG(ped, 170, true) --DisableVehicleHorn
+                PED.SET_PED_CONFIG_FLAG(ped, 429, true) --DisablePlayerVehicleCollisionReactions
+                PED.SET_PED_CONFIG_FLAG(ped, 430, true) --DisablePlayerCollisionReactions
+                PED.SET_PED_CONFIG_FLAG(ped, 203, true) --Avoidance_ignored_by_All
+                PED.SET_PED_CONFIG_FLAG(ped, 204, true) --Avoidance_ignored_by_All_2
+                PED.SET_PED_CONFIG_FLAG(ped, 287, true) --DisableExplosionReactions
+                PED.SET_PED_CONFIG_FLAG(ped, 33, true)  --DisableGunshotReactions
+                PED.SET_PED_CONFIG_FLAG(ped, 122, true) --DisableMeleeReactions
+                PED.SET_PED_CONFIG_FLAG(ped, 292, true) --DisableReactionToBeingHit
+                PED.SET_PED_FLEE_ATTRIBUTES(ped, 0, false) -- Disable fleeing
+                PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
+                PED.SET_PED_COMBAT_ATTRIBUTES(ped, 5, true)
+                PED.SET_PED_COMBAT_ATTRIBUTES(ped, 17, true)
+                PED.SET_PED_COMBAT_ATTRIBUTES(ped, 1424, true)
+                PED.SET_DRIVER_AGGRESSIVENESS(ped, 0.0)
+                PED.SET_DRIVER_ABILITY(ped, 0.0)
+                PED.SET_PED_CAN_BE_TARGETTED(ped, false) 
+                PED.SET_PED_CAN_BE_DRAGGED_OUT(ped, false) 
+                PED.SET_PED_CAN_RAGDOLL(ped, false) 
+                PED.SET_PED_SUFFERS_CRITICAL_HITS(ped, false) 
+                PED.SET_PED_CAN_PLAY_AMBIENT_ANIMS(ped, false) 
+                PED.SET_PED_CAN_PLAY_GESTURE_ANIMS(ped, false) 
+                PED.SET_PED_SEEING_RANGE(ped, 0.0) 
+                PED.SET_PED_HEARING_RANGE(ped, 0.0) 
+                PED.SET_PED_VISUAL_FIELD_MIN_ANGLE(ped, 0.0) 
+                PED.SET_PED_VISUAL_FIELD_MAX_ANGLE(ped, 0.0) 
+                PED.SET_PED_VISUAL_FIELD_PERIPHERAL_RANGE(ped, 0.0) 
+                PED.SET_PED_VISUAL_FIELD_CENTER_ANGLE(ped, 0.0) 
+                TASK.SET_DRIVE_TASK_DRIVING_STYLE(ped, 786603)
+            end
         end
     end
-    util.yield(20)
+    util.yield(20) -- Yield for 20 milliseconds
 end)
 ----------------------------------------------------------------------------------------------------------------------------------------------------
 
