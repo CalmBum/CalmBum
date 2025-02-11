@@ -15,7 +15,7 @@ local json = require("pretty.json")
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 
-local SCRIPT_VERSION = "7.3.5"
+local SCRIPT_VERSION = "7.3.6"
 
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -2253,10 +2253,11 @@ end)
 -- oh shit button / rewind ----------------------------------------------------------------------------------------------------------------------------------------------
 local rewind = false
 local rewindData = {}
+local rewindCount = 0
 
 menu.toggle_loop(miscList, "Oh shit/Rewind", {"ohshitcb"}, "Press once to become a ghost temporarily\nHold down to rewind\nCinematic camera (B/Circle/R) to activate\nHold brake during rewind to pause\nThis will disable cinematic camera when on", function()
-    util.yield(1000)
     if !rewind then
+        util.yield(1000)
         menu.trigger_commands("disablevehcincam On")
     end
     rewind = true
@@ -2265,6 +2266,9 @@ menu.toggle_loop(miscList, "Oh shit/Rewind", {"ohshitcb"}, "Press once to become
     end
 end, function()
     rewind = false
+    rewinding = false
+    resettingCar = false
+    rewindData = {}
     menu.trigger_commands("disablevehcincam Off")
 end)
 
@@ -2310,27 +2314,13 @@ function recordRewind()
             gear = entities.get_current_gear(entities.get_user_vehicle_as_pointer()),
             speed = ENTITY.GET_ENTITY_SPEED(veh)
         },
+        vel = ENTITY.GET_ENTITY_VELOCITY(veh)
     }
 
     local pos = ENTITY.GET_ENTITY_COORDS(veh)
     data.pos.x = pos.x
     data.pos.y = pos.y
     data.pos.z = pos.z
-
-    -- record input (for neon and idk maybe other stuff in future)
-    -- brake
-    if PAD.IS_CONTROL_PRESSED(72, 72) then
-        data.input = 1
-    -- gas
-    elseif PAD.IS_CONTROL_PRESSED(71, 71) then
-        data.input = 2
-    -- ebrake
-    elseif PAD.IS_CONTROL_PRESSED(76, 76) then
-        data.input = 3
-    -- none
-    else
-        data.input = 4
-    end
 
     if table.getn(rewindData) < 100000 then
         table.insert(rewindData, data)
@@ -2339,10 +2329,8 @@ function recordRewind()
         table.insert(rewindData, data)
     end
 
-    util.yield_once()
+    util.yield(5)
 end
-
-local rewindCount = 0
 
 function runRewind(data, last)
     if onFoot() then
@@ -2351,6 +2339,7 @@ function runRewind(data, last)
 
     local veh = get_user_car_id()
 
+    -- pause when brake is pressed
     while PAD.IS_CONTROL_PRESSED(72, 72) and !last do
         if onFoot() then
             return
@@ -2361,66 +2350,67 @@ function runRewind(data, last)
         util.yield_once()
     end
 
+    -- resume when brake is released
     if PAD.IS_CONTROL_JUST_RELEASED(72, 72) then
         ENTITY.FREEZE_ENTITY_POSITION(veh, false)
         VEHICLE.SET_VEHICLE_ENGINE_ON(veh, true, true, false)
     end
 
-    local targetPos = {x = data.pos.x, y = data.pos.y, z = data.pos.z}
-    local oldPos = ENTITY.GET_ENTITY_COORDS(veh)
+    local targetPos = {x = data.pos.x, y = data.pos.y, z = data.pos.z}  -- pos to rewind to
+    local oldPos = ENTITY.GET_ENTITY_COORDS(veh)                        -- current pos
+
+    -- 10 seems to be about the sweet spot for the amount of force
     local vel = {
         x = ((targetPos.x - oldPos.x) * 10),
         y = ((targetPos.y - oldPos.y) * 10),
         z = ((targetPos.z - oldPos.z) * 10)
     }
+    
+    -- i forget all the hell i went through to find this, but these entity rotations line up with the angular velocity function
     local targetRot = {x = data.rot.x, y = data.rot.y, z = data.rot.z}
     local oldRot5 = ENTITY.GET_ENTITY_ROTATION(veh, 5)
     local oldRot4 = ENTITY.GET_ENTITY_ROTATION(veh, 4)
     local oldRot2 = ENTITY.GET_ENTITY_ROTATION(veh, 2)
+
+    -- calculate how much rotation force is needed roughly
     local velR = {
-        x = (targetRot.x - oldRot5.x),
-        y = (targetRot.y - oldRot4.y),
-        z = (targetRot.z - oldRot2.z)
+        x = getVelR(targetRot.x, oldRot5.x),
+        y = getVelR(targetRot.y, oldRot4.y),
+        z = getVelR(targetRot.z, oldRot2.z)
     }
-    if velR.x > 300 then
-        velR.x -= 360
-    elseif velR.x < -300 then
-        velR.x += 360
-    end
-    if velR.y > 300 then
-        velR.y -= 360
-    elseif velR.y < -300 then
-        velR.y += 360
-    end
-    if velR.z > 300 then
-        velR.z -= 360
-    elseif velR.z < -300 then
-        velR.z += 360
-    end
+
+    -- move car
     ENTITY.SET_ENTITY_VELOCITY(veh, vel.x, vel.y, vel.z)
-    ENTITY.SET_ENTITY_ANGULAR_VELOCITY(veh, velR.x / 10, velR.y / 10, velR.z / 10)
+    ENTITY.SET_ENTITY_ANGULAR_VELOCITY(veh, velR.x / 5, velR.y / 5, velR.z / 5)
+    entities.set_rpm(entities.handle_to_pointer(veh), data.extra.rpm)   -- set proper rpm
 
-    local steerAngle = data.steer * -0.14
-    VEHICLE.SET_VEHICLE_STEER_BIAS(veh, steerAngle)
-    entities.set_rpm(entities.handle_to_pointer(veh), data.extra.rpm)
+    -- keep camera in a reasonable spot
+    CAM.SET_THIRD_PERSON_CAM_RELATIVE_HEADING_LIMITS_THIS_UPDATE(data.camHead - 10, data.camHead + 10)
+    CAM.SET_THIRD_PERSON_CAM_RELATIVE_PITCH_LIMITS_THIS_UPDATE(data.camPitch - 10, data.camPitch + 10)
 
-    CAM.SET_GAMEPLAY_CAM_RELATIVE_PITCH(data.camPitch, 1)
-    CAM.SET_GAMEPLAY_CAM_RELATIVE_HEADING(data.camHead)
-
+    -- rewind 50x before deleting
     if rewindCount < 50 and !last then
         rewindCount += 1
-    end
-
-    if table.getn(rewindData) > 50 and !last and rewindCount == 50 then
+    elseif table.getn(rewindData) > 50 and !last and rewindCount == 50 then
         table.remove(rewindData, table.getn(rewindData))
     elseif last then
-        rewindCount -= 1
-        if rewindCount == 0 then
+        ENTITY.SET_ENTITY_VELOCITY(veh, data.vel.x, data.vel.y, data.vel.z)
+        CAM.SET_GAMEPLAY_CAM_RELATIVE_PITCH(data.camPitch, 1)
+        CAM.SET_GAMEPLAY_CAM_RELATIVE_HEADING(data.camHead)
+        if rewindCount == 2 then
             VEHICLE.SET_VEHICLE_ENGINE_ON(veh, true, true, false)
             entities.set_rpm(entities.handle_to_pointer(veh), data.extra.rpm)
             entities.set_current_gear(entities.handle_to_pointer(veh), data.extra.gear)
+            rewindCount = 0
+        else
+            rewindCount -= 1
         end
     end
+end
+
+function getVelR(target, current)
+    local delta = (target - current + 180) % 360 - 180
+    return delta
 end
 
 util.create_tick_handler(function()
@@ -2437,27 +2427,24 @@ util.create_tick_handler(function()
         util.yield(300)
         while PAD.IS_DISABLED_CONTROL_PRESSED(80, 80) and !onFoot() do
             rewinding = true
+            PAD.DISABLE_CONTROL_ACTION(71, 71, true)
             if table.getn(rewindData) > 50 then
                 runRewind(rewindData[table.getn(rewindData) - rewindCount])
             else
                 ENTITY.FREEZE_ENTITY_POSITION(get_user_car_id(), true)
             end
-            util.yield(1)
+            util.yield(5)
         end
         ENTITY.FREEZE_ENTITY_POSITION(get_user_car_id(), false)
         if rewinding and !onFoot() then
-            for i = rewindCount - 1, 0, -1 do
+            PAD.ENABLE_CONTROL_ACTION(71, 71, true)
+            for i = rewindCount - 2, 0, -1 do
                 runRewind(rewindData[table.getn(rewindData) - i], true)
-                table.remove(rewindData, table.getn(rewindData) - i)
-                util.yield(1)
+                util.yield(5)
             end
-            rewindData = {}
-        end
-        rewindCount = 0
-        if !rewinding then
-            util.yield(2700)
         end
         rewinding = false
+        util.yield(2700)
         NETWORK.SET_LOCAL_PLAYER_AS_GHOST(false, true)
         resettingCar = false
     end
@@ -4733,6 +4720,8 @@ function saveVeh(veh, temp)
     cloneTune.drifttires = VEHICLE.GET_DRIFT_TYRES_SET(veh)
     return cloneTune
 end
+
+
 
 function spawnVeh(cloneTune, temp, ghost)
     if ghost then
