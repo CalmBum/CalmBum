@@ -2443,8 +2443,10 @@ util.create_tick_handler(function()
                 util.yield(5)
             end
         end
+        if (!rewinding) then
+            util.yield(2700)
+        end
         rewinding = false
-        util.yield(2700)
         NETWORK.SET_LOCAL_PLAYER_AS_GHOST(false, true)
         resettingCar = false
     end
